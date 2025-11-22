@@ -1,0 +1,27 @@
+{
+  "name": "zorter",
+  "version": "0.1.0",
+  "description": "Zo-native inbox + sorter + router engine.",
+  "license": "MIT",
+  "bin": {
+    "zorter": "bin/zorter.ts"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/server.ts",
+    "start": "bun run src/server.ts",
+    "lint": "echo \"add your linter here\"",
+    "test": "echo \"add tests here\""
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.12.0",
+    "better-sqlite3": "^9.4.0",
+    "hono": "^4.4.0",
+    "toml": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

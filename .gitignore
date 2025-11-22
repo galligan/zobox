@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+*.log
+*.sqlite
+*.db
+.DS_Store
+
+# Zorter runtime data (if you run inside repo)
+inbox/
+files/
+db/zorter.db
+logs/

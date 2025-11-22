@@ -1,0 +1,53 @@
+
+[zorter]
+base_dir = "/home/workspace/Inbox"
+db_path = "/home/workspace/Inbox/db/zorter.db"
+default_channel = "Inbox"
+
+[auth]
+admin_api_key_env_var = "ZORTER_ADMIN_API_KEY" # full read/write
+read_api_key_env_var  = "ZORTER_READ_API_KEY"  # optional read-only
+required = true
+
+[files]
+enabled = true
+base_files_dir = "/home/workspace/Inbox/files"
+path_template = "{baseFilesDir}/{channel}/{date}/{eventId}/{filename}"
+filename_strategy = "original" # original | timestampPrefix | eventIdPrefix | uuid
+keep_base64_in_envelope = false
+
+[types.update]
+description = "Generic status update"
+channel = "Updates"
+payload_example = """
+{
+  "title": "Short title",
+  "body": "Longer markdown text",
+  "tags": ["status", "personal"]
+}
+"""
+
+[types.post]
+description = "Blog post"
+channel = "Posts"
+payload_example = """
+{
+  "title": "My post",
+  "slug": "my-post",
+  "body": "markdown here"
+}
+"""
+
+[workflows.updates]
+type = "update"
+description = "Append updates to a rolling log."
+files_path_template = "{baseFilesDir}/Updates/{date}/{eventId}/{filename}"
+append_to_file = "/home/workspace/Inbox/updates.md"
+route_profile = "store_only"
+
+[workflows.posts]
+type = "post"
+description = "Publish posts to content folder."
+files_path_template = "{baseFilesDir}/Posts/{date}/{eventId}/{filename}"
+append_to_file = "/home/workspace/Inbox/posts_index.md"
+route_profile = "publish_to_worker"
