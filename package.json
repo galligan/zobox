@@ -1,10 +1,10 @@
 {
-  "name": "zorter",
+  "name": "zobox",
   "version": "0.1.0",
   "description": "Zo-native inbox + sorter + router engine.",
   "license": "MIT",
   "bin": {
-    "zorter": "bin/zorter.ts"
+    "zobox": "bin/zobox.ts"
   },
   "type": "module",
   "scripts": {

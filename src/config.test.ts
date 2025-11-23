@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadConfig, loadRoutesConfig } from "./config";
+import { loadConfig, loadDestinationsConfig } from "./config";
 
 // Test regex patterns (moved to top level for performance)
 const FAILED_TO_PARSE_TOML_REGEX = /Failed to parse TOML/;
@@ -26,9 +26,9 @@ describe("loadConfig", () => {
 
   it("loads valid config with all sections defined", () => {
     const configContent = `
-[zorter]
+[zobox]
 base_dir = "/custom/base"
-db_path = "/custom/db/zorter.db"
+db_path = "/custom/db/zobox.db"
 default_channel = "CustomInbox"
 
 [auth]
@@ -47,18 +47,18 @@ keep_base64_in_envelope = true
 description = "Test type"
 channel = "TestChannel"
 
-[workflows.testWorkflow]
+[sorters.testWorkflow]
 type = "testType"
 description = "Test workflow"
 `;
 
-    fs.writeFileSync(path.join(tempDir, "zorter.config.toml"), configContent);
+    fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), configContent);
 
     const config = loadConfig(tempDir);
 
-    expect(config.zorter.base_dir).toBe("/custom/base");
-    expect(config.zorter.db_path).toBe("/custom/db/zorter.db");
-    expect(config.zorter.default_channel).toBe("CustomInbox");
+    expect(config.zobox.base_dir).toBe("/custom/base");
+    expect(config.zobox.db_path).toBe("/custom/db/zobox.db");
+    expect(config.zobox.default_channel).toBe("CustomInbox");
 
     expect(config.auth.admin_api_key_env_var).toBe("CUSTOM_ADMIN_KEY");
     expect(config.auth.read_api_key_env_var).toBe("CUSTOM_READ_KEY");
@@ -75,18 +75,18 @@ description = "Test workflow"
     expect(config.types.testType).toBeDefined();
     expect(config.types.testType.description).toBe("Test type");
 
-    expect(config.workflows.testWorkflow).toBeDefined();
-    expect(config.workflows.testWorkflow.type).toBe("testType");
+    expect(config.sorters.testWorkflow).toBeDefined();
+    expect(config.sorters.testWorkflow.type).toBe("testType");
   });
 
   it("uses defaults when config file doesn't exist", () => {
     const config = loadConfig(tempDir);
 
-    expect(config.zorter.base_dir).toBe(tempDir);
-    expect(config.zorter.db_path).toBe(path.join(tempDir, "db", "zorter.db"));
-    expect(config.zorter.default_channel).toBe("Inbox");
+    expect(config.zobox.base_dir).toBe(tempDir);
+    expect(config.zobox.db_path).toBe(path.join(tempDir, "db", "zobox.db"));
+    expect(config.zobox.default_channel).toBe("Inbox");
 
-    expect(config.auth.admin_api_key_env_var).toBe("ZORTER_ADMIN_API_KEY");
+    expect(config.auth.admin_api_key_env_var).toBe("ZOBOX_ADMIN_API_KEY");
     expect(config.auth.read_api_key_env_var).toBeUndefined();
     expect(config.auth.required).toBe(true);
 
@@ -99,22 +99,22 @@ description = "Test workflow"
     expect(config.files.keep_base64_in_envelope).toBe(false);
 
     expect(config.types).toEqual({});
-    expect(config.workflows).toEqual({});
+    expect(config.sorters).toEqual({});
   });
 
   it("uses defaults for missing sections in partial config", () => {
     const configContent = `
-[zorter]
+[zobox]
 default_channel = "PartialInbox"
 `;
 
-    fs.writeFileSync(path.join(tempDir, "zorter.config.toml"), configContent);
+    fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), configContent);
 
     const config = loadConfig(tempDir);
 
-    expect(config.zorter.default_channel).toBe("PartialInbox");
-    expect(config.zorter.base_dir).toBe(tempDir);
-    expect(config.auth.admin_api_key_env_var).toBe("ZORTER_ADMIN_API_KEY");
+    expect(config.zobox.default_channel).toBe("PartialInbox");
+    expect(config.zobox.base_dir).toBe(tempDir);
+    expect(config.auth.admin_api_key_env_var).toBe("ZOBOX_ADMIN_API_KEY");
     expect(config.files.enabled).toBe(true);
   });
 
@@ -124,20 +124,20 @@ default_channel = "PartialInbox"
 base_dir = "/invalid"
 `;
 
-    fs.writeFileSync(path.join(tempDir, "zorter.config.toml"), invalidContent);
+    fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), invalidContent);
 
     expect(() => loadConfig(tempDir)).toThrow(FAILED_TO_PARSE_TOML_REGEX);
   });
 
   it("throws validation error when base_dir is empty", () => {
     const configContent = `
-[zorter]
+[zobox]
 base_dir = ""
 db_path = "/some/path/db"
 default_channel = "Inbox"
 `;
 
-    fs.writeFileSync(path.join(tempDir, "zorter.config.toml"), configContent);
+    fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), configContent);
 
     expect(() => loadConfig(tempDir)).toThrow(CONFIG_VALIDATION_FAILED_REGEX);
   });
@@ -148,7 +148,7 @@ default_channel = "Inbox"
 admin_api_key_env_var = "notUpperSnakeCase"
 `;
 
-    fs.writeFileSync(path.join(tempDir, "zorter.config.toml"), configContent);
+    fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), configContent);
 
     expect(() => loadConfig(tempDir)).toThrow(CONFIG_VALIDATION_FAILED_REGEX);
   });
@@ -161,7 +161,7 @@ path_template = "{filename}"
 filename_strategy = "invalidStrategy"
 `;
 
-    fs.writeFileSync(path.join(tempDir, "zorter.config.toml"), configContent);
+    fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), configContent);
 
     expect(() => loadConfig(tempDir)).toThrow(CONFIG_VALIDATION_FAILED_REGEX);
   });
@@ -177,7 +177,7 @@ path_template = "{filename}"
 filename_strategy = "${strategy}"
 `;
 
-      fs.writeFileSync(path.join(tempDir, "zorter.config.toml"), configContent);
+      fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), configContent);
 
       const config = loadConfig(tempDir);
       expect(config.files.filename_strategy).toBe(strategy);
@@ -186,17 +186,17 @@ filename_strategy = "${strategy}"
 
   it("validates workflow definitions have required type field", () => {
     const configContent = `
-[workflows.badWorkflow]
+[sorters.badWorkflow]
 description = "Missing type field"
 `;
 
-    fs.writeFileSync(path.join(tempDir, "zorter.config.toml"), configContent);
+    fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), configContent);
 
     expect(() => loadConfig(tempDir)).toThrow(CONFIG_VALIDATION_FAILED_REGEX);
   });
 });
 
-describe("loadRoutesConfig", () => {
+describe("loadDestinationsConfig", () => {
   let tempDir: string;
 
   beforeEach(() => {
@@ -235,7 +235,7 @@ describe("loadRoutesConfig", () => {
       JSON.stringify(routesContent, null, 2)
     );
 
-    const config = loadRoutesConfig(tempDir);
+    const config = loadDestinationsConfig(tempDir);
 
     expect(config).toBeDefined();
     expect(config?.profiles.webhook1).toBeDefined();
@@ -245,7 +245,7 @@ describe("loadRoutesConfig", () => {
   });
 
   it("returns undefined when routes.json doesn't exist", () => {
-    const config = loadRoutesConfig(tempDir);
+    const config = loadDestinationsConfig(tempDir);
     expect(config).toBeUndefined();
   });
 
@@ -254,7 +254,7 @@ describe("loadRoutesConfig", () => {
 
     fs.writeFileSync(path.join(tempDir, "routes.json"), invalidJson);
 
-    expect(() => loadRoutesConfig(tempDir)).toThrow(
+    expect(() => loadDestinationsConfig(tempDir)).toThrow(
       FAILED_TO_LOAD_ROUTES_CONFIG_REGEX
     );
   });
@@ -269,7 +269,7 @@ describe("loadRoutesConfig", () => {
       JSON.stringify(invalidContent)
     );
 
-    expect(() => loadRoutesConfig(tempDir)).toThrow(
+    expect(() => loadDestinationsConfig(tempDir)).toThrow(
       FAILED_TO_LOAD_ROUTES_CONFIG_REGEX
     );
   });
@@ -289,7 +289,7 @@ describe("loadRoutesConfig", () => {
       JSON.stringify(invalidRoutes)
     );
 
-    expect(() => loadRoutesConfig(tempDir)).toThrow(
+    expect(() => loadDestinationsConfig(tempDir)).toThrow(
       FAILED_TO_LOAD_ROUTES_CONFIG_REGEX
     );
   });
@@ -310,7 +310,7 @@ describe("loadRoutesConfig", () => {
       JSON.stringify(invalidRoutes)
     );
 
-    expect(() => loadRoutesConfig(tempDir)).toThrow(
+    expect(() => loadDestinationsConfig(tempDir)).toThrow(
       FAILED_TO_LOAD_ROUTES_CONFIG_REGEX
     );
   });
@@ -331,7 +331,7 @@ describe("loadRoutesConfig", () => {
       JSON.stringify(invalidRoutes)
     );
 
-    expect(() => loadRoutesConfig(tempDir)).toThrow(
+    expect(() => loadDestinationsConfig(tempDir)).toThrow(
       FAILED_TO_LOAD_ROUTES_CONFIG_REGEX
     );
   });
@@ -350,7 +350,7 @@ describe("loadRoutesConfig", () => {
       JSON.stringify(minimalRoutes)
     );
 
-    const config = loadRoutesConfig(tempDir);
+    const config = loadDestinationsConfig(tempDir);
 
     expect(config?.profiles.minimal).toBeDefined();
     expect(config?.profiles.minimal.kind).toBe("http"); // default

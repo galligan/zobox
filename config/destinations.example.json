@@ -1,5 +1,5 @@
 {
-  "$schema": "https://galligan.dev/zorter/routes.schema.json",
+  "$schema": "https://galligan.dev/zobox/routes.schema.json",
   "profiles": {
     "store_only": {
       "kind": "noop",
@@ -8,7 +8,7 @@
     "publish_to_worker": {
       "kind": "http",
       "description": "POST the full item envelope to a worker service.",
-      "url": "http://localhost:9000/zorter/items",
+      "url": "http://localhost:9000/zobox/items",
       "method": "POST",
       "headers": {
         "content-type": "application/json"

@@ -1,12 +1,12 @@
 ---
-name: Zorter - New Workflow
+name: Zobox - New Workflow
 description: Guide agent to create a workflow for an existing item type
 version: 1.0.0
 ---
 
-# Zorter: New Workflow
+# Zobox: New Workflow
 
-You are helping create a new **workflow** for an existing item type in the Zorter inbox + sorter + router engine.
+You are helping create a new **workflow** for an existing item type in the Zobox inbox + sorter + router engine.
 
 Workflows define what happens to items of a specific type: where attachments are stored, what files to append metadata to, and which route profile to use for external routing.
 
@@ -39,9 +39,9 @@ Summarize what you'll create before proceeding.
 
 ### 2. Load current config
 
-- Read `/home/workspace/Inbox/zorter.config.toml`
+- Read `/home/workspace/Inbox/zobox.config.toml`
 - Verify the target type exists in `[types.<name>]` sections
-- If the type doesn't exist, prompt user to create it first using "Zorter: New Type"
+- If the type doesn't exist, prompt user to create it first using "Zobox: New Type"
 
 ### 3. Generate TOML snippet
 
@@ -94,7 +94,7 @@ files_path_template = "{baseFilesDir}/attachments/{eventId}/{filename}"
 files_path_template = "{baseFilesDir}/{channel}/{timestamp}-{filename}"
 ```
 
-### 5. Update zorter.config.toml
+### 5. Update zobox.config.toml
 
 Add the new workflow section:
 
@@ -131,7 +131,7 @@ Configuration:
 
 Next steps:
 1. If using a custom route profile, ensure it exists in routes.json
-2. Restart the Zorter service to apply changes
+2. Restart the Zobox service to apply changes
 3. Test by sending an item with type "<type>"
 4. Verify files land in expected location
 5. Check append target file for metadata entry (if configured)
@@ -139,14 +139,14 @@ Next steps:
 
 ## Workflow binding explained
 
-Zorter automatically applies workflows based on the `type` field:
+Zobox automatically applies workflows based on the `type` field:
 
 1. Item arrives with `type: "task"`
-2. Zorter looks up `[types.task]` for default channel
-3. Zorter finds workflow where `workflow.type == "task"`
+2. Zobox looks up `[types.task]` for default channel
+3. Zobox finds workflow where `workflow.type == "task"`
 4. Applies that workflow's file paths, append rules, and routing
 
-**Important**: Only one workflow per type is recommended. If multiple workflows match, Zorter uses the first one found.
+**Important**: Only one workflow per type is recommended. If multiple workflows match, Zobox uses the first one found.
 
 ## Common pitfalls
 
@@ -165,13 +165,13 @@ After creating a workflow, suggest these tests:
 # Test 1: Send an item without attachments
 curl -X POST "http://localhost:8787/items" \
   -H "content-type: application/json" \
-  -H "x-api-key: $ZORTER_ADMIN_API_KEY" \
+  -H "x-api-key: $ZOBOX_ADMIN_API_KEY" \
   -d '{"type": "<type>", "payload": {"test": "data"}}'
 
 # Test 2: Send an item with base64 attachment
 curl -X POST "http://localhost:8787/items" \
   -H "content-type: application/json" \
-  -H "x-api-key: $ZORTER_ADMIN_API_KEY" \
+  -H "x-api-key: $ZOBOX_ADMIN_API_KEY" \
   -d '{
     "type": "<type>",
     "payload": {"test": "with file"},
@@ -204,7 +204,7 @@ Configuration:
 - Append to: /home/workspace/Inbox/tasks.md
 - Route: store_only
 
-Proceeding to update zorter.config.toml...
+Proceeding to update zobox.config.toml...
 ```
 
 Then add:

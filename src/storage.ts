@@ -1,14 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { ItemEnvelopeSchema } from "./schemas.js";
+import { MessageEnvelopeSchema } from "./schemas.js";
 import type {
-  ItemEnvelope,
-  ItemFilters,
-  ItemIndexRow,
-  ItemView,
-  QueryItemsResult,
-  ZorterConfig,
+  MessageEnvelope,
+  MessageFilters,
+  MessageIndexRow,
+  MessageView,
+  QueryMessagesResult,
+  ZoboxConfig,
 } from "./types";
 import { parseJsonAs } from "./utils/json.js";
 
@@ -56,9 +56,9 @@ export type Storage = {
  * // All directories are created and migrations applied
  * ```
  */
-export function initStorage(config: ZorterConfig): Storage {
-  const baseDir = config.zorter.base_dir || "/home/workspace/Inbox";
-  const dbPath = config.zorter.db_path || path.join(baseDir, "db", "zorter.db");
+export function initStorage(config: ZoboxConfig): Storage {
+  const baseDir = config.zobox.base_dir || "/home/workspace/Inbox";
+  const dbPath = config.zobox.db_path || path.join(baseDir, "db", "zobox.db");
   const dbDir = path.dirname(dbPath);
   const inboxDir = path.join(baseDir, "inbox");
   const filesDir = config.files.base_files_dir || path.join(baseDir, "files");
@@ -114,15 +114,15 @@ CREATE TABLE IF NOT EXISTS items (
   file_dir TEXT,
   attachments_count INTEGER NOT NULL DEFAULT 0,
   has_attachments INTEGER NOT NULL DEFAULT 0,
-  claimed_by TEXT,
-  claimed_at TEXT,
+  subscribed_by TEXT,
+  subscribed_at TEXT,
   summary TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_items_created_at ON items (created_at);
-CREATE INDEX IF NOT EXISTS idx_items_type ON items (type);
-CREATE INDEX IF NOT EXISTS idx_items_channel ON items (channel);
-CREATE INDEX IF NOT EXISTS idx_items_has_attachments ON items (has_attachments);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON items (created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_type ON items (type);
+CREATE INDEX IF NOT EXISTS idx_messages_channel ON items (channel);
+CREATE INDEX IF NOT EXISTS idx_messages_has_attachments ON items (has_attachments);
 `.trimStart();
     fs.writeFileSync(initPath, sql, "utf8");
   }
@@ -153,7 +153,7 @@ function runMigrations(db: SQLiteDatabase, migrationsDir: string) {
  *
  * @example
  * ```typescript
- * const envelope: ItemEnvelope = {
+ * const envelope: MessageEnvelope = {
  *   id: crypto.randomUUID(),
  *   type: 'note',
  *   channel: 'Inbox',
@@ -168,7 +168,7 @@ function runMigrations(db: SQLiteDatabase, migrationsDir: string) {
  */
 export function writeEnvelope(
   storage: Storage,
-  envelope: ItemEnvelope
+  envelope: MessageEnvelope
 ): string {
   const createdDate = envelope.createdAt.slice(0, 10);
   const dir = path.join(storage.inboxDir, createdDate);
@@ -189,7 +189,7 @@ export function writeEnvelope(
  *
  * @example
  * ```typescript
- * const index: ItemIndexRow = {
+ * const index: MessageIndexRow = {
  *   id: envelope.id,
  *   type: envelope.type,
  *   channel: envelope.channel,
@@ -198,17 +198,20 @@ export function writeEnvelope(
  *   fileDir: '/path/to/attachments',
  *   attachmentsCount: 2,
  *   hasAttachments: true,
- *   claimedBy: null,
- *   claimedAt: null,
+ *   subscribedBy: null,
+ *   subscribedAt: null,
  *   summary: null
  * };
- * insertItemIndex(storage, index);
+ * insertMessageIndex(storage, index);
  * ```
  */
-export function insertItemIndex(storage: Storage, index: ItemIndexRow): void {
+export function insertMessageIndex(
+  storage: Storage,
+  index: MessageIndexRow
+): void {
   const stmt = storage.db.prepare(
     `
-INSERT OR REPLACE INTO items (
+INSERT OR REPLACE INTO messages (
   id,
   type,
   channel,
@@ -217,8 +220,8 @@ INSERT OR REPLACE INTO items (
   file_dir,
   attachments_count,
   has_attachments,
-  claimed_by,
-  claimed_at,
+  subscribed_by,
+  subscribed_at,
   summary
 ) VALUES (
   @id,
@@ -229,8 +232,8 @@ INSERT OR REPLACE INTO items (
   @fileDir,
   @attachmentsCount,
   @hasAttachments,
-  @claimedBy,
-  @claimedAt,
+  @subscribedBy,
+  @subscribedAt,
   @summary
 )
 `
@@ -244,8 +247,8 @@ INSERT OR REPLACE INTO items (
     fileDir: index.fileDir,
     attachmentsCount: index.attachmentsCount,
     hasAttachments: index.hasAttachments ? 1 : 0,
-    claimedBy: index.claimedBy ?? null,
-    claimedAt: index.claimedAt ?? null,
+    subscribedBy: index.subscribedBy ?? null,
+    subscribedAt: index.subscribedAt ?? null,
     summary: index.summary ?? null,
   });
 }
@@ -287,26 +290,26 @@ function decodeCursor(cursor?: string | null): number {
  * @example
  * ```typescript
  * // First page
- * const result = queryItems(storage, { type: 'note' }, 20);
+ * const result = queryMessages(storage, { type: 'note' }, 20);
  * console.log(result.items.length); // up to 20
  *
  * // Next page
  * if (result.nextCursor) {
- *   const next = queryItems(storage, { type: 'note' }, 20, result.nextCursor);
+ *   const next = queryMessages(storage, { type: 'note' }, 20, result.nextCursor);
  * }
  * ```
  */
-export function queryItems(
+export function queryMessages(
   storage: Storage,
-  filters: ItemFilters,
+  filters: MessageFilters,
   limit: number,
   cursor?: string | null
-): QueryItemsResult {
+): QueryMessagesResult {
   const safeLimit = Math.min(Math.max(limit, 1), 100);
   const offset = decodeCursor(cursor);
 
   let sql =
-    "SELECT id, type, channel, created_at, has_attachments, attachments_count FROM items WHERE 1=1";
+    "SELECT id, type, channel, created_at, has_attachments, attachments_count FROM messages WHERE 1=1";
   const params: Record<string, unknown> = {};
 
   if (filters.type) {
@@ -341,7 +344,7 @@ export function queryItems(
     attachments_count: number;
   }[];
 
-  const items: ItemView[] = rows.map((row) => ({
+  const items: MessageView[] = rows.map((row) => ({
     id: row.id,
     type: row.type,
     channel: row.channel,
@@ -368,24 +371,26 @@ export function queryItems(
  *
  * @example
  * ```typescript
- * const envelope = getItemEnvelope(storage, 'some-uuid');
+ * const envelope = getMessageEnvelope(storage, 'some-uuid');
  * if (envelope) {
  *   console.log(envelope.payload);
  *   console.log(envelope.attachments);
  * }
  * ```
  */
-export function getItemEnvelope(
+export function getMessageEnvelope(
   storage: Storage,
   id: string
-): ItemEnvelope | null {
-  const stmt = storage.db.prepare("SELECT file_path FROM items WHERE id = @id");
+): MessageEnvelope | null {
+  const stmt = storage.db.prepare(
+    "SELECT file_path FROM messages WHERE id = @id"
+  );
   const row = stmt.get({ id }) as { file_path: string } | undefined;
   if (!row) {
     return null;
   }
   const text = fs.readFileSync(row.file_path, "utf8");
-  return parseJsonAs(text, ItemEnvelopeSchema);
+  return parseJsonAs(text, MessageEnvelopeSchema);
 }
 
 /**
@@ -401,21 +406,21 @@ export function getItemEnvelope(
  * @example
  * ```typescript
  * // Get next unclaimed notes
- * const items = findUnclaimedItems(storage, { type: 'note' }, 10);
+ * const items = findUnclaimedMessages(storage, { type: 'note' }, 10);
  * for (const item of items) {
  *   // Process and acknowledge
- *   ackItem(storage, item.id, 'worker-1');
+ *   ackMessage(storage, item.id, 'worker-1');
  * }
  * ```
  */
-export function findUnclaimedItems(
+export function findUnclaimedMessages(
   storage: Storage,
-  filters: ItemFilters,
+  filters: MessageFilters,
   limit: number
-): ItemEnvelope[] {
+): MessageEnvelope[] {
   const safeLimit = Math.min(Math.max(limit, 1), 50);
 
-  let sql = "SELECT id, file_path FROM items WHERE claimed_by IS NULL";
+  let sql = "SELECT id, file_path FROM messages WHERE subscribed_by IS NULL";
   const params: Record<string, unknown> = {};
 
   if (filters.type) {
@@ -437,10 +442,10 @@ export function findUnclaimedItems(
     file_path: string;
   }[];
 
-  const items: ItemEnvelope[] = [];
+  const items: MessageEnvelope[] = [];
   for (const row of rows) {
     const text = fs.readFileSync(row.file_path, "utf8");
-    items.push(parseJsonAs(text, ItemEnvelopeSchema));
+    items.push(parseJsonAs(text, MessageEnvelopeSchema));
   }
   return items;
 }
@@ -457,9 +462,9 @@ export function findUnclaimedItems(
  *
  * @example
  * ```typescript
- * const items = findUnclaimedItems(storage, {}, 1);
+ * const items = findUnclaimedMessages(storage, {}, 1);
  * if (items.length > 0) {
- *   const claimed = ackItem(storage, items[0].id, 'worker-1');
+ *   const claimed = ackMessage(storage, items[0].id, 'worker-1');
  *   if (claimed) {
  *     // Process the item
  *   } else {
@@ -468,7 +473,7 @@ export function findUnclaimedItems(
  * }
  * ```
  */
-export function ackItem(
+export function ackMessage(
   storage: Storage,
   id: string,
   consumer: string
@@ -476,13 +481,13 @@ export function ackItem(
   const now = new Date().toISOString();
   const stmt = storage.db.prepare(
     `
-UPDATE items
-SET claimed_by = @consumer,
-    claimed_at = @claimedAt
+UPDATE messages
+SET subscribed_by = @consumer,
+    subscribed_at = @subscribedAt
 WHERE id = @id
-  AND (claimed_by IS NULL OR claimed_by = @consumer)
+  AND (subscribed_by IS NULL OR subscribed_by = @consumer)
 `
   );
-  const result = stmt.run({ id, consumer, claimedAt: now });
+  const result = stmt.run({ id, consumer, subscribedAt: now });
   return result.changes > 0;
 }

@@ -1,22 +1,22 @@
 import { serve } from "@hono/node-server";
 import { type Context, Hono } from "hono";
-import { loadConfig, loadRoutesConfig } from "./config.js";
+import { loadConfig, loadDestinationsConfig } from "./config.js";
 import { isZorterError } from "./errors.js";
 import {
   parseRequest,
-  processAndStoreItem,
+  processAndStoreMessage,
   type RuntimeContext,
-  toItemView,
-} from "./handlers/items.js";
+  toMessageView,
+} from "./handlers/messages.js";
 import { checkHealth } from "./health.js";
 import { logger } from "./logger.js";
 import {
-  ackItem,
-  findUnclaimedItems,
+  ackMessage,
+  findUnclaimedMessages,
   initStorage,
-  queryItems,
+  queryMessages,
 } from "./storage.js";
-import type { ItemFilters, ZorterConfig } from "./types.js";
+import type { MessageFilters, ZoboxConfig } from "./types.js";
 
 const BEARER_TOKEN_REGEX = /^Bearer\s+(.+)$/i;
 
@@ -31,14 +31,14 @@ export async function startServer(options?: {
   port?: number;
 }): Promise<void> {
   const baseDir =
-    options?.baseDir || process.env.ZORTER_BASE_DIR || "/home/workspace/Inbox";
+    options?.baseDir || process.env.ZOBOX_BASE_DIR || "/home/workspace/Inbox";
   const port = options?.port
     ? options.port
-    : Number.parseInt(process.env.ZORTER_PORT ?? "8787", 10);
+    : Number.parseInt(process.env.ZOBOX_PORT ?? "8787", 10);
 
   const config = loadConfig(baseDir);
   const storage = initStorage(config);
-  const routes = loadRoutesConfig(baseDir);
+  const routes = loadDestinationsConfig(baseDir);
 
   const runtime: RuntimeContext = {
     config,
@@ -61,7 +61,7 @@ export async function startServer(options?: {
     return c.json(health, statusCode);
   });
 
-  app.post("/items", async (c) => {
+  app.post("/messages", async (c) => {
     const runtimeCtx = c.get("runtime");
     const auth = authenticate(c, runtimeCtx.config, {
       requireAdmin: true,
@@ -72,8 +72,12 @@ export async function startServer(options?: {
 
     try {
       const { item, attachments } = await parseRequest(c);
-      const envelope = await processAndStoreItem(item, attachments, runtimeCtx);
-      return c.json({ item: toItemView(envelope) }, 201);
+      const envelope = await processAndStoreMessage(
+        item,
+        attachments,
+        runtimeCtx
+      );
+      return c.json({ item: toMessageView(envelope) }, 201);
     } catch (err) {
       if (isZorterError(err)) {
         return c.json(
@@ -89,7 +93,7 @@ export async function startServer(options?: {
     }
   });
 
-  app.get("/items", (c) => {
+  app.get("/messages", (c) => {
     const runtimeCtx = c.get("runtime");
     const auth = authenticate(c, runtimeCtx.config);
     if ("error" in auth) {
@@ -97,7 +101,7 @@ export async function startServer(options?: {
     }
 
     const query = c.req.query();
-    const filters: ItemFilters = {
+    const filters: MessageFilters = {
       type: query.type,
       channel: query.channel,
       since: query.since,
@@ -107,11 +111,11 @@ export async function startServer(options?: {
     const limit = query.limit ? Number.parseInt(query.limit, 10) : 50;
     const cursor = query.cursor || undefined;
 
-    const result = queryItems(runtimeCtx.storage, filters, limit, cursor);
+    const result = queryMessages(runtimeCtx.storage, filters, limit, cursor);
     return c.json(result);
   });
 
-  app.get("/items/next", (c) => {
+  app.get("/messages/next", (c) => {
     const runtimeCtx = c.get("runtime");
     const auth = authenticate(c, runtimeCtx.config);
     if ("error" in auth) {
@@ -121,20 +125,20 @@ export async function startServer(options?: {
     const query = c.req.query();
     const consumer = query.consumer;
     if (!consumer) {
-      return c.json({ error: '"consumer" query parameter is required' }, 400);
+      return c.json({ error: '"subscriber" query parameter is required' }, 400);
     }
 
     const limit = query.limit ? Number.parseInt(query.limit, 10) : 10;
-    const filters: ItemFilters = {
+    const filters: MessageFilters = {
       type: query.type,
       channel: query.channel,
     };
 
-    const items = findUnclaimedItems(runtimeCtx.storage, filters, limit);
+    const items = findUnclaimedMessages(runtimeCtx.storage, filters, limit);
     return c.json({ items });
   });
 
-  app.post("/items/:id/ack", async (c) => {
+  app.post("/messages/:id/ack", async (c) => {
     const runtimeCtx = c.get("runtime");
     const auth = authenticate(c, runtimeCtx.config, {
       requireAdmin: true,
@@ -151,7 +155,7 @@ export async function startServer(options?: {
       if (
         body &&
         typeof body === "object" &&
-        "consumer" in body &&
+        "subscriber" in body &&
         typeof body.consumer === "string"
       ) {
         consumer = body.consumer;
@@ -160,7 +164,7 @@ export async function startServer(options?: {
       // ignore body parse errors, handled below
     }
 
-    const qConsumer = c.req.query("consumer");
+    const qConsumer = c.req.query("subscriber");
     if (!consumer && qConsumer) {
       consumer = qConsumer;
     }
@@ -168,13 +172,13 @@ export async function startServer(options?: {
     if (!consumer) {
       return c.json(
         {
-          error: '"consumer" must be provided in body or query string',
+          error: '"subscriber" must be provided in body or query string',
         },
         400
       );
     }
 
-    const ok = ackItem(runtimeCtx.storage, id, consumer);
+    const ok = ackMessage(runtimeCtx.storage, id, consumer);
     if (!ok) {
       return c.json(
         {
@@ -234,7 +238,7 @@ function extractBearerToken(authHeader?: string | null): string | undefined {
 
 function authenticate(
   c: Context<AppEnv>,
-  config: ZorterConfig,
+  config: ZoboxConfig,
   opts: { requireAdmin?: boolean; requireAuthForPublic?: boolean } = {}
 ):
   | { role: "admin" | "read" | "public" }

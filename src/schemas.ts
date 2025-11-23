@@ -5,18 +5,18 @@ import { z } from "zod";
 // ============================================================================
 
 /**
- * Schema for the [zorter] section of zorter.config.toml
+ * Schema for the [zobox] section of zobox.config.toml
  */
-export const ZorterSectionSchema = z.object({
+export const ZoboxSectionSchema = z.object({
   base_dir: z.string().min(1, "base_dir must not be empty"),
   db_path: z.string().min(1, "db_path must not be empty"),
   default_channel: z.string().min(1, "default_channel must not be empty"),
 });
 
-export type ZorterSection = z.infer<typeof ZorterSectionSchema>;
+export type ZoboxSection = z.infer<typeof ZoboxSectionSchema>;
 
 /**
- * Schema for the [auth] section of zorter.config.toml
+ * Schema for the [auth] section of zobox.config.toml
  */
 export const AuthSectionSchema = z.object({
   admin_api_key_env_var: z
@@ -49,7 +49,7 @@ export const FilenameStrategySchema = z.enum([
 export type FilenameStrategy = z.infer<typeof FilenameStrategySchema>;
 
 /**
- * Schema for the [files] section of zorter.config.toml
+ * Schema for the [files] section of zobox.config.toml
  */
 export const FilesSectionSchema = z.object({
   enabled: z.boolean().default(true),
@@ -88,34 +88,34 @@ export const TypeDefinitionSchema = z
 export type TypeDefinition = z.infer<typeof TypeDefinitionSchema>;
 
 /**
- * Schema for a workflow definition [workflows.<name>]
+ * Schema for a workflow definition [sorters.<name>]
  * Additional metadata is allowed via catchAll
  */
-export const WorkflowDefinitionSchema = z
+export const SorterDefinitionSchema = z
   .object({
     type: z.string().min(1, "workflow type must not be empty"),
     description: z.string().optional(),
     files_path_template: z.string().optional(),
     append_to_file: z.string().optional(),
-    route_profile: z.string().optional(),
+    destination: z.string().optional(),
   })
   .catchall(z.unknown());
 
-export type WorkflowDefinition = z.infer<typeof WorkflowDefinitionSchema>;
+export type SorterDefinition = z.infer<typeof SorterDefinitionSchema>;
 
 /**
- * Complete schema for zorter.config.toml
+ * Complete schema for zobox.config.toml
  */
-export const ZorterConfigSchema = z.object({
-  zorter: ZorterSectionSchema,
+export const ZoboxConfigSchema = z.object({
+  zobox: ZoboxSectionSchema,
   auth: AuthSectionSchema,
   files: FilesSectionSchema,
   types: z.record(z.string(), TypeDefinitionSchema).default({}),
-  workflows: z.record(z.string(), WorkflowDefinitionSchema).default({}),
+  sorters: z.record(z.string(), SorterDefinitionSchema).default({}),
   tools: z.record(z.string(), z.unknown()).optional(),
 });
 
-export type ZorterConfig = z.infer<typeof ZorterConfigSchema>;
+export type ZoboxConfig = z.infer<typeof ZoboxConfigSchema>;
 
 // ============================================================================
 // Routes Configuration Schemas
@@ -124,7 +124,7 @@ export type ZorterConfig = z.infer<typeof ZorterConfigSchema>;
 /**
  * Schema for a route profile in routes.json
  */
-export const RouteProfileSchema = z.object({
+export const DestinationSchema = z.object({
   kind: z.enum(["http", "noop"]).default("http"),
   url: z.string().url().optional(),
   method: z
@@ -137,16 +137,16 @@ export const RouteProfileSchema = z.object({
   description: z.string().optional(),
 });
 
-export type RouteProfile = z.infer<typeof RouteProfileSchema>;
+export type Destination = z.infer<typeof DestinationSchema>;
 
 /**
  * Schema for routes.json
  */
-export const RoutesConfigSchema = z.object({
-  profiles: z.record(z.string(), RouteProfileSchema),
+export const DestinationsConfigSchema = z.object({
+  profiles: z.record(z.string(), DestinationSchema),
 });
 
-export type RoutesConfig = z.infer<typeof RoutesConfigSchema>;
+export type DestinationsConfig = z.infer<typeof DestinationsConfigSchema>;
 
 // ============================================================================
 // API Input Schemas
@@ -155,15 +155,16 @@ export type RoutesConfig = z.infer<typeof RoutesConfigSchema>;
 /**
  * Schema for new item input via POST /items
  */
-export const NewItemInputSchema = z.object({
+export const NewMessageInputSchema = z.object({
   type: z.string().min(1, "type must not be empty"),
   payload: z.unknown(),
   channel: z.string().optional(),
   source: z.string().optional(),
   meta: z.unknown().optional(),
+  tags: z.array(z.string().min(1).max(50)).max(20).optional(),
 });
 
-export type NewItemInput = z.infer<typeof NewItemInputSchema>;
+export type NewMessageInput = z.infer<typeof NewMessageInputSchema>;
 
 /**
  * Schema for base64-encoded attachment input
@@ -225,7 +226,7 @@ export type AttachmentEnvelope = z.infer<typeof AttachmentEnvelopeSchema>;
 /**
  * Schema for item envelope (stored in filesystem)
  */
-export const ItemEnvelopeSchema = z.object({
+export const MessageEnvelopeSchema = z.object({
   id: z.string(),
   type: z.string(),
   source: z.string().optional(),
@@ -234,14 +235,15 @@ export const ItemEnvelopeSchema = z.object({
   attachments: z.array(AttachmentEnvelopeSchema).default([]),
   meta: z.unknown().optional(),
   createdAt: z.string().datetime(),
+  tags: z.array(z.string().min(1).max(50)).max(20).default([]),
 });
 
-export type ItemEnvelope = z.infer<typeof ItemEnvelopeSchema>;
+export type MessageEnvelope = z.infer<typeof MessageEnvelopeSchema>;
 
 /**
  * Schema for item index row (SQLite table)
  */
-export const ItemIndexRowSchema = z.object({
+export const MessageIndexRowSchema = z.object({
   id: z.string(),
   type: z.string(),
   channel: z.string(),
@@ -250,48 +252,51 @@ export const ItemIndexRowSchema = z.object({
   fileDir: z.string().nullable(),
   attachmentsCount: z.number().int().nonnegative(),
   hasAttachments: z.boolean(),
-  claimedBy: z.string().nullable().optional(),
-  claimedAt: z.string().datetime().nullable().optional(),
+  subscribedBy: z.string().nullable().optional(),
+  subscribedAt: z.string().datetime().nullable().optional(),
   summary: z.string().nullable().optional(),
+  tags: z.string().nullable().optional(), // JSON string in SQLite
 });
 
-export type ItemIndexRow = z.infer<typeof ItemIndexRowSchema>;
+export type MessageIndexRow = z.infer<typeof MessageIndexRowSchema>;
 
 /**
  * Schema for item view (API response projection)
  */
-export const ItemViewSchema = z.object({
+export const MessageViewSchema = z.object({
   id: z.string(),
   type: z.string(),
   channel: z.string(),
   createdAt: z.string().datetime(),
   hasAttachments: z.boolean(),
   attachmentsCount: z.number().int().nonnegative(),
+  tags: z.array(z.string()).default([]),
 });
 
-export type ItemView = z.infer<typeof ItemViewSchema>;
+export type MessageView = z.infer<typeof MessageViewSchema>;
 
 /**
  * Schema for item filters (query parameters)
  */
-export const ItemFiltersSchema = z.object({
+export const MessageFiltersSchema = z.object({
   type: z.string().optional(),
   channel: z.string().optional(),
   since: z.string().datetime().optional(),
   until: z.string().datetime().optional(),
+  tags: z.string().optional(), // Comma-separated tags for filtering
 });
 
-export type ItemFilters = z.infer<typeof ItemFiltersSchema>;
+export type MessageFilters = z.infer<typeof MessageFiltersSchema>;
 
 /**
  * Schema for query items result
  */
-export const QueryItemsResultSchema = z.object({
-  items: z.array(ItemViewSchema),
+export const QueryMessagesResultSchema = z.object({
+  items: z.array(MessageViewSchema),
   nextCursor: z.string().nullable(),
 });
 
-export type QueryItemsResult = z.infer<typeof QueryItemsResultSchema>;
+export type QueryMessagesResult = z.infer<typeof QueryMessagesResultSchema>;
 
 /**
  * Schema for attachment context (used during processing)

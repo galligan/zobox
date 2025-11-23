@@ -26,7 +26,7 @@ Successfully decomposed the POST /items handler to reduce complexity from **50 t
   - Authentication
   - Delegate to parseRequest()
   - Delegate to processAndStoreItem()
-  - Error handling with ZorterError hierarchy
+  - Error handling with ZoboxError hierarchy
 
 ```typescript
 app.post("/items", async (c) => {
@@ -41,7 +41,7 @@ app.post("/items", async (c) => {
     const envelope = await processAndStoreItem(item, attachments, runtime);
     return c.json({ item: toItemView(envelope) }, 201);
   } catch (err) {
-    if (isZorterError(err)) {
+    if (isZoboxError(err)) {
       return c.json({ error: err.message, code: err.code }, err.statusCode);
     }
     logger.error("Failed to process /items request", err);
@@ -90,7 +90,7 @@ app.post("/items", async (c) => {
 2. **Readability:** Main handler is now 24 lines vs 180 lines
 3. **Maintainability:** Changes to parsing, storage, or envelope creation are isolated
 4. **Reusability:** Functions can be reused in other handlers or CLI commands
-5. **Error Handling:** Structured ZorterError hierarchy for consistent responses
+5. **Error Handling:** Structured ZoboxError hierarchy for consistent responses
 6. **Type Safety:** Explicit types for all inputs and outputs
 
 ## Complexity Reduction

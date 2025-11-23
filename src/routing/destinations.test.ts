@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ItemEnvelope, RouteProfile, RoutesConfig } from "../types";
-import { invokeHttpProfile, routeItem, validateRouteProfile } from "./profiles";
+import type {
+  MessageEnvelope,
+  Destination,
+  DestinationsConfig,
+} from "../types";
+import { invokeHttpProfile, routeItem, validateDestination } from "./profiles";
 
-describe("validateRouteProfile", () => {
-  const mockRoutesConfig: RoutesConfig = {
+describe("validateDestination", () => {
+  const mockDestinationsConfig: DestinationsConfig = {
     profiles: {
       enabled_http: {
         kind: "http",
@@ -32,7 +36,7 @@ describe("validateRouteProfile", () => {
   };
 
   it("returns invalid for store_only profile", () => {
-    const result = validateRouteProfile("store_only", mockRoutesConfig);
+    const result = validateDestination("store_only", mockDestinationsConfig);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.reason).toBe("store_only profile");
@@ -40,7 +44,7 @@ describe("validateRouteProfile", () => {
   });
 
   it("returns invalid for empty profile name", () => {
-    const result = validateRouteProfile("", mockRoutesConfig);
+    const result = validateDestination("", mockDestinationsConfig);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.reason).toBe("store_only profile");
@@ -48,7 +52,7 @@ describe("validateRouteProfile", () => {
   });
 
   it("returns invalid when routesConfig is undefined", () => {
-    const result = validateRouteProfile("test_profile", undefined);
+    const result = validateDestination("test_profile", undefined);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.reason).toBe(
@@ -58,7 +62,7 @@ describe("validateRouteProfile", () => {
   });
 
   it("returns invalid when profile does not exist", () => {
-    const result = validateRouteProfile("nonexistent", mockRoutesConfig);
+    const result = validateDestination("nonexistent", mockDestinationsConfig);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.reason).toBe(
@@ -68,7 +72,7 @@ describe("validateRouteProfile", () => {
   });
 
   it("returns invalid when profile is disabled", () => {
-    const result = validateRouteProfile("disabled_http", mockRoutesConfig);
+    const result = validateDestination("disabled_http", mockDestinationsConfig);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.reason).toBe('route profile "disabled_http" is disabled');
@@ -76,7 +80,7 @@ describe("validateRouteProfile", () => {
   });
 
   it("returns invalid when profile is noop kind", () => {
-    const result = validateRouteProfile("noop_profile", mockRoutesConfig);
+    const result = validateDestination("noop_profile", mockDestinationsConfig);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.reason).toBe(
@@ -86,7 +90,7 @@ describe("validateRouteProfile", () => {
   });
 
   it("returns invalid when HTTP profile has no url", () => {
-    const result = validateRouteProfile("no_url", mockRoutesConfig);
+    const result = validateDestination("no_url", mockDestinationsConfig);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.reason).toBe(
@@ -96,15 +100,17 @@ describe("validateRouteProfile", () => {
   });
 
   it("returns valid for enabled HTTP profile with url", () => {
-    const result = validateRouteProfile("enabled_http", mockRoutesConfig);
+    const result = validateDestination("enabled_http", mockDestinationsConfig);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.profile).toEqual(mockRoutesConfig.profiles.enabled_http);
+      expect(result.profile).toEqual(
+        mockDestinationsConfig.profiles.enabled_http
+      );
     }
   });
 
   it("returns valid for minimal HTTP profile (defaults to enabled)", () => {
-    const result = validateRouteProfile("minimal_http", mockRoutesConfig);
+    const result = validateDestination("minimal_http", mockDestinationsConfig);
     expect(result.valid).toBe(true);
     if (result.valid) {
       expect(result.profile.url).toBe("https://example.com/webhook");
@@ -113,7 +119,7 @@ describe("validateRouteProfile", () => {
 });
 
 describe("invokeHttpProfile", () => {
-  const mockEnvelope: ItemEnvelope = {
+  const mockEnvelope: MessageEnvelope = {
     id: "test-123",
     type: "test",
     channel: "TestChannel",
@@ -134,7 +140,7 @@ describe("invokeHttpProfile", () => {
     });
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    const profile: RouteProfile = {
+    const profile: Destination = {
       kind: "http",
       url: "https://example.com/webhook",
       enabled: true,
@@ -170,7 +176,7 @@ describe("invokeHttpProfile", () => {
     });
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    const profile: RouteProfile = {
+    const profile: Destination = {
       kind: "http",
       url: "https://example.com/webhook",
       method: "PUT",
@@ -194,7 +200,7 @@ describe("invokeHttpProfile", () => {
     });
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    const profile: RouteProfile = {
+    const profile: Destination = {
       kind: "http",
       url: "https://example.com/webhook",
       headers: {
@@ -225,7 +231,7 @@ describe("invokeHttpProfile", () => {
     });
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    const profile: RouteProfile = {
+    const profile: Destination = {
       kind: "http",
       url: "https://example.com/webhook",
       enabled: true,
@@ -251,7 +257,7 @@ describe("invokeHttpProfile", () => {
       .mockRejectedValue(new Error("Network request failed"));
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    const profile: RouteProfile = {
+    const profile: Destination = {
       kind: "http",
       url: "https://example.com/webhook",
       enabled: true,
@@ -282,7 +288,7 @@ describe("invokeHttpProfile", () => {
     );
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    const profile: RouteProfile = {
+    const profile: Destination = {
       kind: "http",
       url: "https://example.com/webhook",
       enabled: true,
@@ -305,7 +311,7 @@ describe("invokeHttpProfile", () => {
     const mockFetch = vi.fn().mockRejectedValue("String error");
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    const profile: RouteProfile = {
+    const profile: Destination = {
       kind: "http",
       url: "https://example.com/webhook",
       enabled: true,
@@ -324,7 +330,7 @@ describe("invokeHttpProfile", () => {
   });
 
   it("returns error when profile has no url", async () => {
-    const profile: RouteProfile = {
+    const profile: Destination = {
       kind: "http",
       enabled: true,
     };
@@ -343,7 +349,7 @@ describe("invokeHttpProfile", () => {
 });
 
 describe("routeItem", () => {
-  const mockEnvelope: ItemEnvelope = {
+  const mockEnvelope: MessageEnvelope = {
     id: "test-456",
     type: "test",
     channel: "TestChannel",
@@ -352,7 +358,7 @@ describe("routeItem", () => {
     createdAt: "2025-01-01T12:00:00Z",
   };
 
-  const mockRoutesConfig: RoutesConfig = {
+  const mockDestinationsConfig: DestinationsConfig = {
     profiles: {
       good_profile: {
         kind: "http",
@@ -379,7 +385,7 @@ describe("routeItem", () => {
     const mockFetch = vi.fn();
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    await routeItem("store_only", mockEnvelope, mockRoutesConfig);
+    await routeItem("store_only", mockEnvelope, mockDestinationsConfig);
 
     expect(mockFetch).not.toHaveBeenCalled();
     expect(console.warn).not.toHaveBeenCalled();
@@ -393,7 +399,7 @@ describe("routeItem", () => {
 
     expect(mockFetch).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalledWith(
-      '[zorter] route profile "test_profile" requested but no routes.json loaded'
+      '[zobox] route profile "test_profile" requested but no routes.json loaded'
     );
   });
 
@@ -401,11 +407,11 @@ describe("routeItem", () => {
     const mockFetch = vi.fn();
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    await routeItem("missing_profile", mockEnvelope, mockRoutesConfig);
+    await routeItem("missing_profile", mockEnvelope, mockDestinationsConfig);
 
     expect(mockFetch).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalledWith(
-      '[zorter] route profile "missing_profile" not found in routes.json'
+      '[zobox] route profile "missing_profile" not found in routes.json'
     );
   });
 
@@ -413,7 +419,7 @@ describe("routeItem", () => {
     const mockFetch = vi.fn();
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    await routeItem("disabled_profile", mockEnvelope, mockRoutesConfig);
+    await routeItem("disabled_profile", mockEnvelope, mockDestinationsConfig);
 
     expect(mockFetch).not.toHaveBeenCalled();
     // Should not warn because disabled profiles fail validation silently
@@ -426,7 +432,7 @@ describe("routeItem", () => {
     });
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    await routeItem("good_profile", mockEnvelope, mockRoutesConfig);
+    await routeItem("good_profile", mockEnvelope, mockDestinationsConfig);
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://example.com/webhook",
@@ -445,10 +451,10 @@ describe("routeItem", () => {
     });
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    await routeItem("good_profile", mockEnvelope, mockRoutesConfig);
+    await routeItem("good_profile", mockEnvelope, mockDestinationsConfig);
 
     expect(console.warn).toHaveBeenCalledWith(
-      '[zorter] route "good_profile" failed: HTTP 503 when sending to https://example.com/webhook'
+      '[zobox] route "good_profile" failed: HTTP 503 when sending to https://example.com/webhook'
     );
   });
 
@@ -458,10 +464,10 @@ describe("routeItem", () => {
       .mockRejectedValue(new Error("Connection refused"));
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    await routeItem("good_profile", mockEnvelope, mockRoutesConfig);
+    await routeItem("good_profile", mockEnvelope, mockDestinationsConfig);
 
     expect(console.warn).toHaveBeenCalledWith(
-      '[zorter] route "good_profile" failed: Connection refused'
+      '[zobox] route "good_profile" failed: Connection refused'
     );
   });
 });

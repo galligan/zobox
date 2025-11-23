@@ -8,10 +8,10 @@
  * - parseRequest(): Routes to multipart or JSON parser based on content-type
  * - parseMultipartRequest(): Handles multipart form data with file uploads
  * - parseJsonRequest(): Handles JSON requests with base64 attachments
- * - createItemEnvelope(): Assembles envelope from input and metadata
- * - storeAndProcessItem(): Writes envelope, index, and applies workflows
- * - processAndStoreItem(): Orchestrates the full item creation flow
- * - toItemView(): Converts envelope to API response format
+ * - createMessageEnvelope(): Assembles envelope from input and metadata
+ * - storeAndProcessItem(): Writes envelope, index, and applies sorters
+ * - processAndStoreMessage(): Orchestrates the full item creation flow
+ * - toMessageView(): Converts envelope to API response format
  *
  * Error handling uses ZorterError hierarchy for structured responses.
  */
@@ -20,32 +20,32 @@ import crypto from "node:crypto";
 import type { Context } from "hono";
 import { ValidationError } from "../errors.js";
 import type { Storage } from "../storage.js";
-import { insertItemIndex, writeEnvelope } from "../storage.js";
+import { insertMessageIndex, writeEnvelope } from "../storage.js";
 import type {
   AttachmentInput,
-  ItemEnvelope,
-  ItemIndexRow,
-  NewItemInput,
-  RoutesConfig,
-  ZorterConfig,
+  MessageEnvelope,
+  MessageIndexRow,
+  NewMessageInput,
+  DestinationsConfig,
+  ZoboxConfig,
 } from "../types.js";
 import { parseJson } from "../utils/json.js";
 import {
-  applyWorkflowSideEffects,
-  getWorkflowForType,
+  applySorterSideEffects,
+  getSorterForType,
   type ProcessAttachmentsResult,
   processAttachments,
   resolveChannel,
-  type WorkflowBinding,
+  type SorterBinding,
 } from "../workflows.js";
 
 /**
  * Runtime context for handler operations.
  */
 export type RuntimeContext = {
-  config: ZorterConfig;
+  config: ZoboxConfig;
   storage: Storage;
-  routes?: RoutesConfig;
+  routes?: DestinationsConfig;
 };
 
 /**
@@ -62,14 +62,14 @@ export type ItemMetadata = {
  * Result of parsing a multipart or JSON request.
  */
 export type ParsedRequest = {
-  item: NewItemInput;
+  item: NewMessageInput;
   attachments: AttachmentInput[];
 };
 
 /**
  * Result of item view conversion.
  */
-export type ItemView = {
+export type MessageView = {
   id: string;
   type: string;
   channel: string;
@@ -114,7 +114,7 @@ export async function parseMultipartRequest(
     );
   }
 
-  const item = normalizeNewItemInput(parsed);
+  const item = normalizeNewMessageInput(parsed);
   const attachments: AttachmentInput[] = [];
 
   // Extract file attachments from form fields
@@ -161,7 +161,7 @@ export async function parseJsonRequest(c: Context): Promise<ParsedRequest> {
     );
   }
 
-  const item = normalizeNewItemInput(raw);
+  const item = normalizeNewMessageInput(raw);
   const attachments: AttachmentInput[] = [];
 
   // Extract base64 attachments if present
@@ -215,11 +215,11 @@ export async function parseRequest(c: Context): Promise<ParsedRequest> {
  * @param processedAttachments - Result of attachment processing
  * @returns Complete item envelope
  */
-export function createItemEnvelope(
-  item: NewItemInput,
+export function createMessageEnvelope(
+  item: NewMessageInput,
   metadata: ItemMetadata,
   processedAttachments: ProcessAttachmentsResult
-): ItemEnvelope {
+): MessageEnvelope {
   return {
     id: metadata.id,
     type: item.type,
@@ -233,22 +233,22 @@ export function createItemEnvelope(
 }
 
 /**
- * Stores item envelope and index, then applies workflow side effects.
+ * Stores item envelope and index, then applies sorter side effects.
  *
  * @param envelope - Item envelope to store
  * @param processedAttachments - Result of attachment processing
- * @param workflow - Workflow binding if applicable
+ * @param sorter - Sorter binding if applicable
  * @param runtime - Runtime context
  */
 export async function storeAndProcessItem(
-  envelope: ItemEnvelope,
+  envelope: MessageEnvelope,
   processedAttachments: ProcessAttachmentsResult,
-  workflow: WorkflowBinding | null,
+  sorter: SorterBinding | null,
   runtime: RuntimeContext
 ): Promise<void> {
   const filePath = writeEnvelope(runtime.storage, envelope);
 
-  const index: ItemIndexRow = {
+  const index: MessageIndexRow = {
     id: envelope.id,
     type: envelope.type,
     channel: envelope.channel,
@@ -257,15 +257,15 @@ export async function storeAndProcessItem(
     fileDir: processedAttachments.attachmentsDir,
     attachmentsCount: envelope.attachments.length,
     hasAttachments: envelope.attachments.length > 0,
-    claimedBy: null,
-    claimedAt: null,
+    subscribedBy: null,
+    subscribedAt: null,
     summary: null,
   };
 
-  insertItemIndex(runtime.storage, index);
+  insertMessageIndex(runtime.storage, index);
 
-  await applyWorkflowSideEffects(
-    workflow,
+  await applySorterSideEffects(
+    sorter,
     envelope,
     runtime.storage,
     runtime.routes
@@ -281,31 +281,31 @@ export async function storeAndProcessItem(
  * @param runtime - Runtime context
  * @returns Created item envelope
  */
-export async function processAndStoreItem(
-  item: NewItemInput,
+export async function processAndStoreMessage(
+  item: NewMessageInput,
   attachments: AttachmentInput[],
   runtime: RuntimeContext
-): Promise<ItemEnvelope> {
+): Promise<MessageEnvelope> {
   const now = new Date();
   const createdAt = now.toISOString();
   const date = createdAt.slice(0, 10);
   const id = crypto.randomUUID();
 
   const channel = resolveChannel(runtime.config, item.type, item.channel);
-  const workflow = getWorkflowForType(runtime.config, item.type);
+  const sorter = getSorterForType(runtime.config, item.type);
 
   const processedAttachments = processAttachments({
     config: runtime.config,
     storage: runtime.storage,
     ctx: { id, type: item.type, channel, createdAt, date },
     inputs: attachments,
-    workflowBinding: workflow,
+    sorterBinding: sorter,
   });
 
   const metadata: ItemMetadata = { id, channel, createdAt, date };
-  const envelope = createItemEnvelope(item, metadata, processedAttachments);
+  const envelope = createMessageEnvelope(item, metadata, processedAttachments);
 
-  await storeAndProcessItem(envelope, processedAttachments, workflow, runtime);
+  await storeAndProcessItem(envelope, processedAttachments, sorter, runtime);
 
   return envelope;
 }
@@ -316,7 +316,7 @@ export async function processAndStoreItem(
  * @param envelope - Item envelope
  * @returns Item view for API response
  */
-export function toItemView(envelope: ItemEnvelope): ItemView {
+export function toMessageView(envelope: MessageEnvelope): MessageView {
   return {
     id: envelope.id,
     type: envelope.type,
@@ -328,14 +328,14 @@ export function toItemView(envelope: ItemEnvelope): ItemView {
 }
 
 /**
- * Normalizes raw input into NewItemInput.
+ * Normalizes raw input into NewMessageInput.
  * Validates required fields and provides defaults.
  *
  * @param raw - Raw request body
- * @returns Normalized NewItemInput
+ * @returns Normalized NewMessageInput
  * @throws ValidationError if input is invalid
  */
-function normalizeNewItemInput(raw: unknown): NewItemInput {
+function normalizeNewMessageInput(raw: unknown): NewMessageInput {
   if (!raw || typeof raw !== "object") {
     throw new ValidationError("Invalid item body", "INVALID_ITEM_BODY");
   }

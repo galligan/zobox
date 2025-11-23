@@ -1,18 +1,18 @@
-# Zorter API Reference
+# Zobox API Reference
 
 ## Base URL and Versioning
 
 **Base URL**: `http://localhost:8787` (default)
 
-Zorter V1 does not use versioned API paths. All endpoints are accessed directly from the base URL.
+Zobox V1 does not use versioned API paths. All endpoints are accessed directly from the base URL.
 
 **Environment Variables**:
-- `ZORTER_PORT`: Port to listen on (default: `8787`)
-- `ZORTER_BASE_DIR`: Base directory for inbox (default: `/home/workspace/Inbox`)
+- `ZOBOX_PORT`: Port to listen on (default: `8787`)
+- `ZOBOX_BASE_DIR`: Base directory for inbox (default: `/home/workspace/Inbox`)
 
 ## Authentication
 
-Zorter supports two authentication methods:
+Zobox supports two authentication methods:
 
 ### 1. x-api-key Header
 
@@ -28,19 +28,19 @@ authorization: Bearer YOUR_API_KEY
 
 ### API Key Types
 
-Zorter supports two types of API keys configured via environment variables:
+Zobox supports two types of API keys configured via environment variables:
 
-- **Admin Key** (`ZORTER_ADMIN_API_KEY`): Full read/write access
+- **Admin Key** (`ZOBOX_ADMIN_API_KEY`): Full read/write access
   - Required for `POST /items`, `POST /items/:id/ack`
-- **Read Key** (`ZORTER_READ_API_KEY`): Read-only access
+- **Read Key** (`ZOBOX_READ_API_KEY`): Read-only access
   - Can be used for `GET /items`, `GET /items/next`, `GET /health`
 
-Configuration in `zorter.config.toml`:
+Configuration in `zobox.config.toml`:
 
 ```toml
 [auth]
-admin_api_key_env_var = "ZORTER_ADMIN_API_KEY"
-read_api_key_env_var  = "ZORTER_READ_API_KEY"
+admin_api_key_env_var = "ZOBOX_ADMIN_API_KEY"
+read_api_key_env_var  = "ZOBOX_READ_API_KEY"
 required = true
 ```
 
@@ -70,7 +70,7 @@ curl http://localhost:8787/health
 
 ### POST /items
 
-Ingest a new item into Zorter. Supports three modes: JSON-only, JSON with base64 attachments, and multipart with binary files.
+Ingest a new item into Zobox. Supports three modes: JSON-only, JSON with base64 attachments, and multipart with binary files.
 
 **Authentication**: Admin key required
 
@@ -107,7 +107,7 @@ curl -X POST "http://localhost:8787/items" \
 ```
 
 **Fields**:
-- `type` (required, string): Item type, must match a type defined in `zorter.config.toml`
+- `type` (required, string): Item type, must match a type defined in `zobox.config.toml`
 - `payload` (optional, any): Arbitrary JSON data for this item
 - `channel` (optional, string): Channel override; defaults to type's channel or `default_channel`
 - `source` (optional, string): Source identifier; defaults to `"api"`
@@ -314,7 +314,7 @@ curl "http://localhost:8787/items?channel=Updates&since=2025-11-20T00:00:00Z&lim
 
 **Pagination**:
 
-Zorter uses cursor-based pagination. To fetch the next page:
+Zobox uses cursor-based pagination. To fetch the next page:
 
 ```bash
 curl "http://localhost:8787/items?limit=50&cursor=MjU=" \

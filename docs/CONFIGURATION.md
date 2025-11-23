@@ -1,11 +1,11 @@
-# Zorter Configuration Guide
+# Zobox Configuration Guide
 
 ## Overview
 
-Zorter is configured via a TOML file located in your base directory:
+Zobox is configured via a TOML file located in your base directory:
 
 ```
-/home/workspace/Inbox/zorter.config.toml
+/home/workspace/Inbox/zobox.config.toml
 ```
 
 This guide covers all configuration sections, path template tokens, filename strategies, and workflow patterns.
@@ -17,14 +17,14 @@ This guide covers all configuration sections, path template tokens, filename str
 ### Example Configuration
 
 ```toml
-[zorter]
+[zobox]
 base_dir = "/home/workspace/Inbox"
-db_path = "/home/workspace/Inbox/db/zorter.db"
+db_path = "/home/workspace/Inbox/db/zobox.db"
 default_channel = "Inbox"
 
 [auth]
-admin_api_key_env_var = "ZORTER_ADMIN_API_KEY"
-read_api_key_env_var  = "ZORTER_READ_API_KEY"
+admin_api_key_env_var = "ZOBOX_ADMIN_API_KEY"
+read_api_key_env_var  = "ZOBOX_READ_API_KEY"
 required = true
 
 [files]
@@ -75,17 +75,17 @@ route_profile = "publish_to_worker"
 
 ## Section Reference
 
-### [zorter]
+### [zobox]
 
-Global Zorter settings.
+Global Zobox settings.
 
 **Fields**:
 
 - `base_dir` (string, default: `/home/workspace/Inbox`)
-  - Root directory for all Zorter data
-  - Contains `inbox/`, `files/`, `db/`, `logs/`, and `zorter.config.toml`
+  - Root directory for all Zobox data
+  - Contains `inbox/`, `files/`, `db/`, `logs/`, and `zobox.config.toml`
 
-- `db_path` (string, default: `{base_dir}/db/zorter.db`)
+- `db_path` (string, default: `{base_dir}/db/zobox.db`)
   - Path to SQLite database file
   - Used for indexing items and enabling fast queries
 
@@ -95,9 +95,9 @@ Global Zorter settings.
 **Example**:
 
 ```toml
-[zorter]
+[zobox]
 base_dir = "/home/workspace/Inbox"
-db_path = "/home/workspace/Inbox/db/zorter.db"
+db_path = "/home/workspace/Inbox/db/zobox.db"
 default_channel = "Inbox"
 ```
 
@@ -109,11 +109,11 @@ Authentication configuration.
 
 **Fields**:
 
-- `admin_api_key_env_var` (string, default: `"ZORTER_ADMIN_API_KEY"`)
+- `admin_api_key_env_var` (string, default: `"ZOBOX_ADMIN_API_KEY"`)
   - Environment variable name for admin API key
   - Admin key grants full read/write access
 
-- `read_api_key_env_var` (string, optional, default: `"ZORTER_READ_API_KEY"`)
+- `read_api_key_env_var` (string, optional, default: `"ZOBOX_READ_API_KEY"`)
   - Environment variable name for read-only API key
   - Read key grants access to `GET /items`, `GET /items/next`, `GET /health`
 
@@ -125,16 +125,16 @@ Authentication configuration.
 
 ```toml
 [auth]
-admin_api_key_env_var = "ZORTER_ADMIN_API_KEY"
-read_api_key_env_var  = "ZORTER_READ_API_KEY"
+admin_api_key_env_var = "ZOBOX_ADMIN_API_KEY"
+read_api_key_env_var  = "ZOBOX_READ_API_KEY"
 required = true
 ```
 
 **Environment Variables**:
 
 ```bash
-export ZORTER_ADMIN_API_KEY="your-secret-admin-key"
-export ZORTER_READ_API_KEY="your-read-only-key"
+export ZOBOX_ADMIN_API_KEY="your-secret-admin-key"
+export ZOBOX_READ_API_KEY="your-read-only-key"
 ```
 
 ---
@@ -190,13 +190,13 @@ Type definitions. Each `[types.<typeName>]` section defines a semantic category 
 
 - `channel` (string, optional)
   - Default channel for items of this type
-  - Overrides `[zorter].default_channel`
+  - Overrides `[zobox].default_channel`
 
 - `payload_example` (string, optional)
   - Example JSON payload for this type
   - Used by agents and documentation
 
-- Custom fields: any additional metadata (ignored by Zorter, available for tooling)
+- Custom fields: any additional metadata (ignored by Zobox, available for tooling)
 
 **Example**:
 
@@ -252,7 +252,7 @@ Workflow definitions. Each `[workflows.<workflowName>]` section defines behavior
   - Defines where to send the item envelope after ingestion
   - See [Route Profiles](#route-profiles)
 
-- Custom fields: any additional metadata (ignored by Zorter, available for tooling)
+- Custom fields: any additional metadata (ignored by Zobox, available for tooling)
 
 **Example**:
 
@@ -289,7 +289,7 @@ Reserved for future Zo integration hooks. Not used in V1.
 
 ## Path Template Tokens
 
-Path templates are strings with `{token}` placeholders that Zorter replaces at runtime.
+Path templates are strings with `{token}` placeholders that Zobox replaces at runtime.
 
 ### Supported Tokens
 
@@ -441,7 +441,7 @@ Route profiles define what happens to item envelopes after ingestion. They are c
 
 ```json
 {
-  "$schema": "https://galligan.dev/zorter/routes.schema.json",
+  "$schema": "https://galligan.dev/zobox/routes.schema.json",
   "profiles": {
     "store_only": {
       "kind": "noop",
@@ -450,7 +450,7 @@ Route profiles define what happens to item envelopes after ingestion. They are c
     "publish_to_worker": {
       "kind": "http",
       "description": "POST the full item envelope to a worker service.",
-      "url": "http://localhost:9000/zorter/items",
+      "url": "http://localhost:9000/zobox/items",
       "method": "POST",
       "headers": {
         "content-type": "application/json"
@@ -461,7 +461,7 @@ Route profiles define what happens to item envelopes after ingestion. They are c
     "webhook_notification": {
       "kind": "http",
       "description": "Send item to external webhook.",
-      "url": "https://api.example.com/webhooks/zorter",
+      "url": "https://api.example.com/webhooks/zobox",
       "method": "POST",
       "headers": {
         "content-type": "application/json",
@@ -503,7 +503,7 @@ type = "post"
 route_profile = "publish_to_worker"
 ```
 
-After ingestion, Zorter will POST the full `ItemEnvelope` to the configured URL.
+After ingestion, Zobox will POST the full `ItemEnvelope` to the configured URL.
 
 ### Error Handling
 
@@ -682,7 +682,7 @@ filename_strategy = "timestampPrefix"
 
 ### Validation
 
-When editing `zorter.config.toml`, ensure:
+When editing `zobox.config.toml`, ensure:
 
 1. **TOML Syntax**: Valid TOML format (use a TOML validator)
 2. **Required Fields**: Each workflow must have a `type` field matching a defined type
@@ -696,17 +696,17 @@ When editing `zorter.config.toml`, ensure:
 2. **Readable Paths**: Use meaningful channel names and clear path templates
 3. **Consistent Naming**: Match workflow names to type names for clarity
 4. **Test Workflows**: Ingest a test item after changing configuration
-5. **Version Control**: Keep `zorter.config.toml` and `routes.json` in version control
+5. **Version Control**: Keep `zobox.config.toml` and `routes.json` in version control
 6. **Document Custom Types**: Add clear `description` and `payload_example` for agent use
 7. **Secure API Keys**: Never commit API keys; use environment variables only
-8. **Restart After Changes**: Restart Zorter server after editing configuration
+8. **Restart After Changes**: Restart Zobox server after editing configuration
 
 ### Configuration Reload
 
-Zorter V1 does not support hot-reload. After editing `zorter.config.toml` or `routes.json`, restart the server:
+Zobox V1 does not support hot-reload. After editing `zobox.config.toml` or `routes.json`, restart the server:
 
 ```bash
-# Stop Zorter (Ctrl+C or kill process)
+# Stop Zobox (Ctrl+C or kill process)
 # Restart
 bun run src/server.ts
 ```
@@ -714,7 +714,7 @@ bun run src/server.ts
 Or via Zo User Service:
 
 ```bash
-zo service restart zorter
+zo service restart zobox
 ```
 
 ---
@@ -765,16 +765,16 @@ zo service restart zorter
 
 | Variable | Purpose | Example |
 |----------|---------|---------|
-| `ZORTER_ADMIN_API_KEY` | Admin API key (full access) | `"your-secret-admin-key"` |
-| `ZORTER_READ_API_KEY` | Read-only API key (optional) | `"your-read-only-key"` |
-| `ZORTER_BASE_DIR` | Base directory override | `/home/workspace/Inbox` |
-| `ZORTER_PORT` | Server port override | `8787` |
+| `ZOBOX_ADMIN_API_KEY` | Admin API key (full access) | `"your-secret-admin-key"` |
+| `ZOBOX_READ_API_KEY` | Read-only API key (optional) | `"your-read-only-key"` |
+| `ZOBOX_BASE_DIR` | Base directory override | `/home/workspace/Inbox` |
+| `ZOBOX_PORT` | Server port override | `8787` |
 
 Set in shell or `.env` file (do not commit `.env`):
 
 ```bash
-export ZORTER_ADMIN_API_KEY="your-secret-admin-key"
-export ZORTER_READ_API_KEY="your-read-only-key"
-export ZORTER_BASE_DIR="/custom/path"
-export ZORTER_PORT="8787"
+export ZOBOX_ADMIN_API_KEY="your-secret-admin-key"
+export ZOBOX_READ_API_KEY="your-read-only-key"
+export ZOBOX_BASE_DIR="/custom/path"
+export ZOBOX_PORT="8787"
 ```

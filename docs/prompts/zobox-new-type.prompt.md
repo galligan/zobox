@@ -1,12 +1,12 @@
 ---
-name: Zorter - New Type
-description: Guide agent to create a new item type in Zorter configuration
+name: Zobox - New Type
+description: Guide agent to create a new item type in Zobox configuration
 version: 1.0.0
 ---
 
-# Zorter: New Type
+# Zobox: New Type
 
-You are helping create a new **item type** in the Zorter inbox + sorter + router engine.
+You are helping create a new **item type** in the Zobox inbox + sorter + router engine.
 
 Types describe semantic categories of items (e.g., `update`, `post`, `task`, `note`, `event`). Each type can specify a default channel, description, and example payload to help agents understand how to use it.
 
@@ -37,8 +37,8 @@ Summarize what you'll create before proceeding.
 
 ### 2. Load current config
 
-- Read `/home/workspace/Inbox/zorter.config.toml`
-- If it doesn't exist, copy `config/zorter.config.example.toml` from the Zorter repo to `/home/workspace/Inbox/zorter.config.toml` and read it
+- Read `/home/workspace/Inbox/zobox.config.toml`
+- If it doesn't exist, copy `config/zobox.config.example.toml` from the Zobox repo to `/home/workspace/Inbox/zobox.config.toml` and read it
 
 ### 3. Generate TOML snippet
 
@@ -66,7 +66,7 @@ payload_example = """
 - Payload example should use triple-quoted strings (`"""`) for multi-line JSON
 - Keep JSON example minimal but representative
 
-### 4. Update zorter.config.toml
+### 4. Update zobox.config.toml
 
 Add the new type section to the config file:
 
@@ -92,14 +92,14 @@ Report back:
 ```
 Created new type: <typeName>
 
-Section added to zorter.config.toml:
+Section added to zobox.config.toml:
 - Description: <description>
 - Default channel: <channel>
 - Payload example: <yes/no>
 
 Next steps:
-1. Consider creating a workflow for this type using the "Zorter: New Workflow" prompt
-2. Restart the Zorter service to apply changes
+1. Consider creating a workflow for this type using the "Zobox: New Workflow" prompt
+2. Restart the Zobox service to apply changes
 3. Test by sending an item: POST /items with {"type": "<typeName>", "payload": {...}}
 ```
 
@@ -125,7 +125,7 @@ Details:
 - Default channel: Bookmarks
 - Payload example: { "url", "title", "tags" }
 
-Proceeding to update zorter.config.toml...
+Proceeding to update zobox.config.toml...
 ```
 
 Then add:

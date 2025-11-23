@@ -32,7 +32,7 @@ describe("logger", () => {
 
   describe("debug", () => {
     test("logs debug message with timestamp and level", () => {
-      process.env.ZORTER_LOG_LEVEL = "debug";
+      process.env.ZOBOX_LOG_LEVEL = "debug";
 
       logger.debug("Test debug message");
 
@@ -45,7 +45,7 @@ describe("logger", () => {
     });
 
     test("includes metadata when provided", () => {
-      process.env.ZORTER_LOG_LEVEL = "debug";
+      process.env.ZOBOX_LOG_LEVEL = "debug";
 
       logger.debug("Debug with meta", { userId: "123", action: "test" });
 
@@ -55,7 +55,7 @@ describe("logger", () => {
     });
 
     test("does not log when level is info", () => {
-      process.env.ZORTER_LOG_LEVEL = "info";
+      process.env.ZOBOX_LOG_LEVEL = "info";
 
       logger.debug("Should not appear");
 
@@ -63,7 +63,7 @@ describe("logger", () => {
     });
 
     test("does not include meta field when empty", () => {
-      process.env.ZORTER_LOG_LEVEL = "debug";
+      process.env.ZOBOX_LOG_LEVEL = "debug";
 
       logger.debug("No meta");
 
@@ -75,7 +75,7 @@ describe("logger", () => {
 
   describe("info", () => {
     test("logs info message with timestamp and level", () => {
-      process.env.ZORTER_LOG_LEVEL = "info";
+      process.env.ZOBOX_LOG_LEVEL = "info";
 
       logger.info("Test info message");
 
@@ -88,7 +88,7 @@ describe("logger", () => {
     });
 
     test("includes metadata when provided", () => {
-      process.env.ZORTER_LOG_LEVEL = "info";
+      process.env.ZOBOX_LOG_LEVEL = "info";
 
       logger.info("Info with meta", { requestId: "req-123" });
 
@@ -98,7 +98,7 @@ describe("logger", () => {
     });
 
     test("does not log when level is warn", () => {
-      process.env.ZORTER_LOG_LEVEL = "warn";
+      process.env.ZOBOX_LOG_LEVEL = "warn";
 
       logger.info("Should not appear");
 
@@ -108,7 +108,7 @@ describe("logger", () => {
 
   describe("warn", () => {
     test("logs warning message to stderr", () => {
-      process.env.ZORTER_LOG_LEVEL = "warn";
+      process.env.ZOBOX_LOG_LEVEL = "warn";
 
       logger.warn("Test warning");
 
@@ -122,7 +122,7 @@ describe("logger", () => {
     });
 
     test("includes metadata when provided", () => {
-      process.env.ZORTER_LOG_LEVEL = "warn";
+      process.env.ZOBOX_LOG_LEVEL = "warn";
 
       logger.warn("Warning with context", { route: "/items" });
 
@@ -132,7 +132,7 @@ describe("logger", () => {
     });
 
     test("does not log when level is error", () => {
-      process.env.ZORTER_LOG_LEVEL = "error";
+      process.env.ZOBOX_LOG_LEVEL = "error";
 
       logger.warn("Should not appear");
 
@@ -142,7 +142,7 @@ describe("logger", () => {
 
   describe("error", () => {
     test("logs error message to stderr", () => {
-      process.env.ZORTER_LOG_LEVEL = "error";
+      process.env.ZOBOX_LOG_LEVEL = "error";
 
       logger.error("Test error");
 
@@ -156,7 +156,7 @@ describe("logger", () => {
     });
 
     test("includes error details when Error is provided", () => {
-      process.env.ZORTER_LOG_LEVEL = "error";
+      process.env.ZOBOX_LOG_LEVEL = "error";
       const err = new Error("Something failed");
 
       logger.error("Operation failed", err);
@@ -170,7 +170,7 @@ describe("logger", () => {
     });
 
     test("includes error code for ZorterError instances", () => {
-      process.env.ZORTER_LOG_LEVEL = "error";
+      process.env.ZOBOX_LOG_LEVEL = "error";
       const err = new ValidationError("Invalid input", "INVALID_TYPE");
 
       logger.error("Validation failed", err);
@@ -182,7 +182,7 @@ describe("logger", () => {
     });
 
     test("includes both error and metadata", () => {
-      process.env.ZORTER_LOG_LEVEL = "error";
+      process.env.ZOBOX_LOG_LEVEL = "error";
       const err = new Error("Test error");
 
       logger.error("Failed", err, { context: "test" });
@@ -196,7 +196,7 @@ describe("logger", () => {
 
   describe("log level filtering", () => {
     test("debug logs everything", () => {
-      process.env.ZORTER_LOG_LEVEL = "debug";
+      process.env.ZOBOX_LOG_LEVEL = "debug";
 
       logger.debug("debug");
       logger.info("info");
@@ -208,7 +208,7 @@ describe("logger", () => {
     });
 
     test("info skips debug", () => {
-      process.env.ZORTER_LOG_LEVEL = "info";
+      process.env.ZOBOX_LOG_LEVEL = "info";
 
       logger.debug("debug");
       logger.info("info");
@@ -220,7 +220,7 @@ describe("logger", () => {
     });
 
     test("warn skips debug and info", () => {
-      process.env.ZORTER_LOG_LEVEL = "warn";
+      process.env.ZOBOX_LOG_LEVEL = "warn";
 
       logger.debug("debug");
       logger.info("info");
@@ -232,7 +232,7 @@ describe("logger", () => {
     });
 
     test("error only logs errors", () => {
-      process.env.ZORTER_LOG_LEVEL = "error";
+      process.env.ZOBOX_LOG_LEVEL = "error";
 
       logger.debug("debug");
       logger.info("info");
@@ -245,7 +245,7 @@ describe("logger", () => {
 
     test("defaults to debug in development", () => {
       process.env.NODE_ENV = "development";
-      process.env.ZORTER_LOG_LEVEL = undefined;
+      process.env.ZOBOX_LOG_LEVEL = undefined;
 
       logger.debug("Should appear");
 
@@ -254,7 +254,7 @@ describe("logger", () => {
 
     test("defaults to info in production", () => {
       process.env.NODE_ENV = "production";
-      process.env.ZORTER_LOG_LEVEL = undefined;
+      process.env.ZOBOX_LOG_LEVEL = undefined;
 
       logger.debug("Should not appear");
       logger.info("Should appear");
@@ -265,7 +265,7 @@ describe("logger", () => {
     });
 
     test("ignores invalid log level values", () => {
-      process.env.ZORTER_LOG_LEVEL = "invalid";
+      process.env.ZOBOX_LOG_LEVEL = "invalid";
       process.env.NODE_ENV = "production";
 
       logger.debug("Should not appear");
@@ -277,7 +277,7 @@ describe("logger", () => {
 
   describe("createChildLogger", () => {
     test("creates logger with pre-populated metadata", () => {
-      process.env.ZORTER_LOG_LEVEL = "info";
+      process.env.ZOBOX_LOG_LEVEL = "info";
       const child = createChildLogger({ requestId: "req-123" });
 
       child.info("Child log");
@@ -288,7 +288,7 @@ describe("logger", () => {
     });
 
     test("merges parent and child metadata", () => {
-      process.env.ZORTER_LOG_LEVEL = "info";
+      process.env.ZOBOX_LOG_LEVEL = "info";
       const child = createChildLogger({ requestId: "req-123" });
 
       child.info("Child log", { action: "create" });
@@ -302,7 +302,7 @@ describe("logger", () => {
     });
 
     test("child metadata overrides parent on conflicts", () => {
-      process.env.ZORTER_LOG_LEVEL = "info";
+      process.env.ZOBOX_LOG_LEVEL = "info";
       const child = createChildLogger({ key: "parent" });
 
       child.info("Test", { key: "child" });
@@ -313,7 +313,7 @@ describe("logger", () => {
     });
 
     test("works with all log levels", () => {
-      process.env.ZORTER_LOG_LEVEL = "debug";
+      process.env.ZOBOX_LOG_LEVEL = "debug";
       const child = createChildLogger({ context: "test" });
 
       child.debug("debug");

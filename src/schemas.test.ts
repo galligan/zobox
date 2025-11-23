@@ -8,18 +8,18 @@ import {
   BinaryAttachmentInputSchema,
   FilenameStrategySchema,
   FilesSectionSchema,
-  ItemEnvelopeSchema,
-  ItemFiltersSchema,
-  ItemIndexRowSchema,
-  ItemViewSchema,
-  NewItemInputSchema,
-  QueryItemsResultSchema,
-  RouteProfileSchema,
-  RoutesConfigSchema,
+  MessageEnvelopeSchema,
+  MessageFiltersSchema,
+  MessageIndexRowSchema,
+  MessageViewSchema,
+  NewMessageInputSchema,
+  QueryMessagesResultSchema,
+  DestinationSchema,
+  DestinationsConfigSchema,
   TypeDefinitionSchema,
-  WorkflowDefinitionSchema,
-  ZorterConfigSchema,
-  ZorterSectionSchema,
+  SorterDefinitionSchema,
+  ZoboxConfigSchema,
+  ZoboxSectionSchema,
 } from "./schemas";
 
 // Test regex patterns at top level for performance
@@ -28,34 +28,34 @@ const TEMPLATE_TOKEN_REGEX = /template token/;
 const YYYY_MM_DD_REGEX = /YYYY-MM-DD/;
 
 // ============================================================================
-// ZorterSection Tests
+// ZoboxSection Tests
 // ============================================================================
 
-describe("ZorterSectionSchema", () => {
-  it("should parse a valid ZorterSection", () => {
+describe("ZoboxSectionSchema", () => {
+  it("should parse a valid ZoboxSection", () => {
     const input = {
       base_dir: "/home/workspace/Inbox",
-      db_path: "/home/workspace/Inbox/db/zorter.db",
+      db_path: "/home/workspace/Inbox/db/zobox.db",
       default_channel: "Inbox",
     };
-    const result = ZorterSectionSchema.parse(input);
+    const result = ZoboxSectionSchema.parse(input);
     expect(result).toEqual(input);
   });
 
   it("should reject empty base_dir", () => {
     const input = {
       base_dir: "",
-      db_path: "/home/workspace/Inbox/db/zorter.db",
+      db_path: "/home/workspace/Inbox/db/zobox.db",
       default_channel: "Inbox",
     };
-    expect(() => ZorterSectionSchema.parse(input)).toThrow();
+    expect(() => ZoboxSectionSchema.parse(input)).toThrow();
   });
 
   it("should reject missing fields", () => {
     const input = {
       base_dir: "/home/workspace/Inbox",
     };
-    expect(() => ZorterSectionSchema.parse(input)).toThrow();
+    expect(() => ZoboxSectionSchema.parse(input)).toThrow();
   });
 });
 
@@ -66,8 +66,8 @@ describe("ZorterSectionSchema", () => {
 describe("AuthSectionSchema", () => {
   it("should parse a valid AuthSection with all fields", () => {
     const input = {
-      admin_api_key_env_var: "ZORTER_ADMIN_API_KEY",
-      read_api_key_env_var: "ZORTER_READ_API_KEY",
+      admin_api_key_env_var: "ZOBOX_ADMIN_API_KEY",
+      read_api_key_env_var: "ZOBOX_READ_API_KEY",
       required: true,
     };
     const result = AuthSectionSchema.parse(input);
@@ -76,7 +76,7 @@ describe("AuthSectionSchema", () => {
 
   it("should use default for required when not provided", () => {
     const input = {
-      admin_api_key_env_var: "ZORTER_ADMIN_API_KEY",
+      admin_api_key_env_var: "ZOBOX_ADMIN_API_KEY",
     };
     const result = AuthSectionSchema.parse(input);
     expect(result.required).toBe(true);
@@ -84,7 +84,7 @@ describe("AuthSectionSchema", () => {
 
   it("should accept optional read_api_key_env_var", () => {
     const input = {
-      admin_api_key_env_var: "ZORTER_ADMIN_API_KEY",
+      admin_api_key_env_var: "ZOBOX_ADMIN_API_KEY",
       required: false,
     };
     const result = AuthSectionSchema.parse(input);
@@ -111,7 +111,7 @@ describe("AuthSectionSchema", () => {
 
   it("should reject env var names starting with numbers", () => {
     const input = {
-      admin_api_key_env_var: "1ZORTER_ADMIN_KEY",
+      admin_api_key_env_var: "1ZOBOX_ADMIN_KEY",
       required: true,
     };
     expect(() => AuthSectionSchema.parse(input)).toThrow();
@@ -225,27 +225,27 @@ describe("TypeDefinitionSchema", () => {
 });
 
 // ============================================================================
-// WorkflowDefinition Tests
+// SorterDefinition Tests
 // ============================================================================
 
-describe("WorkflowDefinitionSchema", () => {
-  it("should parse a minimal WorkflowDefinition", () => {
+describe("SorterDefinitionSchema", () => {
+  it("should parse a minimal SorterDefinition", () => {
     const input = {
       type: "update",
     };
-    const result = WorkflowDefinitionSchema.parse(input);
+    const result = SorterDefinitionSchema.parse(input);
     expect(result).toEqual(input);
   });
 
-  it("should parse a full WorkflowDefinition", () => {
+  it("should parse a full SorterDefinition", () => {
     const input = {
       type: "update",
       description: "Append updates to a rolling log",
       files_path_template: "{baseFilesDir}/Updates/{date}/{eventId}/{filename}",
       append_to_file: "/home/workspace/Inbox/updates.md",
-      route_profile: "store_only",
+      destination: "store_only",
     };
-    const result = WorkflowDefinitionSchema.parse(input);
+    const result = SorterDefinitionSchema.parse(input);
     expect(result).toEqual(input);
   });
 
@@ -254,7 +254,7 @@ describe("WorkflowDefinitionSchema", () => {
       type: "post",
       custom_setting: 42,
     };
-    const result = WorkflowDefinitionSchema.parse(input);
+    const result = SorterDefinitionSchema.parse(input);
     expect(result.custom_setting).toBe(42);
   });
 
@@ -262,32 +262,32 @@ describe("WorkflowDefinitionSchema", () => {
     const input = {
       type: "",
     };
-    expect(() => WorkflowDefinitionSchema.parse(input)).toThrow();
+    expect(() => SorterDefinitionSchema.parse(input)).toThrow();
   });
 
   it("should reject missing type", () => {
     const input = {
       description: "Missing type field",
     };
-    expect(() => WorkflowDefinitionSchema.parse(input)).toThrow();
+    expect(() => SorterDefinitionSchema.parse(input)).toThrow();
   });
 });
 
 // ============================================================================
-// ZorterConfig Tests
+// ZoboxConfig Tests
 // ============================================================================
 
-describe("ZorterConfigSchema", () => {
+describe("ZoboxConfigSchema", () => {
   it("should parse a valid complete config", () => {
     const input = {
-      zorter: {
+      zobox: {
         base_dir: "/home/workspace/Inbox",
-        db_path: "/home/workspace/Inbox/db/zorter.db",
+        db_path: "/home/workspace/Inbox/db/zobox.db",
         default_channel: "Inbox",
       },
       auth: {
-        admin_api_key_env_var: "ZORTER_ADMIN_API_KEY",
-        read_api_key_env_var: "ZORTER_READ_API_KEY",
+        admin_api_key_env_var: "ZOBOX_ADMIN_API_KEY",
+        read_api_key_env_var: "ZOBOX_READ_API_KEY",
         required: true,
       },
       files: {
@@ -303,7 +303,7 @@ describe("ZorterConfigSchema", () => {
           channel: "Updates",
         },
       },
-      workflows: {
+      sorters: {
         updates: {
           type: "update",
           description: "Append updates to a rolling log",
@@ -314,26 +314,26 @@ describe("ZorterConfigSchema", () => {
         some_tool: { enabled: true },
       },
     };
-    const result = ZorterConfigSchema.parse(input);
+    const result = ZoboxConfigSchema.parse(input);
     expect(result).toEqual(input);
   });
 
   it("should apply defaults for empty types and workflows", () => {
     const input = {
-      zorter: {
+      zobox: {
         base_dir: "/home/workspace/Inbox",
-        db_path: "/home/workspace/Inbox/db/zorter.db",
+        db_path: "/home/workspace/Inbox/db/zobox.db",
         default_channel: "Inbox",
       },
       auth: {
-        admin_api_key_env_var: "ZORTER_ADMIN_API_KEY",
+        admin_api_key_env_var: "ZOBOX_ADMIN_API_KEY",
       },
       files: {
         base_files_dir: "/home/workspace/Inbox/files",
         path_template: "{baseFilesDir}/{filename}",
       },
     };
-    const result = ZorterConfigSchema.parse(input);
+    const result = ZoboxConfigSchema.parse(input);
     expect(result.types).toEqual({});
     expect(result.workflows).toEqual({});
     expect(result.tools).toBeUndefined();
@@ -341,9 +341,9 @@ describe("ZorterConfigSchema", () => {
 
   it("should reject config with invalid auth section", () => {
     const input = {
-      zorter: {
+      zobox: {
         base_dir: "/home/workspace/Inbox",
-        db_path: "/home/workspace/Inbox/db/zorter.db",
+        db_path: "/home/workspace/Inbox/db/zobox.db",
         default_channel: "Inbox",
       },
       auth: {
@@ -354,21 +354,21 @@ describe("ZorterConfigSchema", () => {
         path_template: "{filename}",
       },
     };
-    expect(() => ZorterConfigSchema.parse(input)).toThrow();
+    expect(() => ZoboxConfigSchema.parse(input)).toThrow();
   });
 });
 
 // ============================================================================
-// RouteProfile Tests
+// Destination Tests
 // ============================================================================
 
-describe("RouteProfileSchema", () => {
+describe("DestinationSchema", () => {
   it("should parse a minimal HTTP profile", () => {
     const input = {
       kind: "http" as const,
       url: "http://localhost:9000/webhook",
     };
-    const result = RouteProfileSchema.parse(input);
+    const result = DestinationSchema.parse(input);
     expect(result.enabled).toBe(true);
     expect(result.kind).toBe("http");
   });
@@ -386,7 +386,7 @@ describe("RouteProfileSchema", () => {
       timeoutMs: 5000,
       description: "Publish to worker service",
     };
-    const result = RouteProfileSchema.parse(input);
+    const result = DestinationSchema.parse(input);
     expect(result).toEqual(input);
   });
 
@@ -395,7 +395,7 @@ describe("RouteProfileSchema", () => {
       kind: "noop" as const,
       description: "Do nothing",
     };
-    const result = RouteProfileSchema.parse(input);
+    const result = DestinationSchema.parse(input);
     expect(result.kind).toBe("noop");
   });
 
@@ -403,7 +403,7 @@ describe("RouteProfileSchema", () => {
     const input = {
       url: "http://example.com/hook",
     };
-    const result = RouteProfileSchema.parse(input);
+    const result = DestinationSchema.parse(input);
     expect(result.kind).toBe("http");
     expect(result.enabled).toBe(true);
   });
@@ -413,7 +413,7 @@ describe("RouteProfileSchema", () => {
       kind: "http" as const,
       url: "not-a-url",
     };
-    expect(() => RouteProfileSchema.parse(input)).toThrow();
+    expect(() => DestinationSchema.parse(input)).toThrow();
   });
 
   it("should reject invalid HTTP method", () => {
@@ -422,7 +422,7 @@ describe("RouteProfileSchema", () => {
       url: "http://example.com",
       method: "INVALID",
     };
-    expect(() => RouteProfileSchema.parse(input)).toThrow();
+    expect(() => DestinationSchema.parse(input)).toThrow();
   });
 
   it("should accept valid HTTP methods (case-insensitive)", () => {
@@ -431,7 +431,7 @@ describe("RouteProfileSchema", () => {
         url: "http://example.com",
         method,
       };
-      const result = RouteProfileSchema.parse(input);
+      const result = DestinationSchema.parse(input);
       expect(result.method).toBe(method);
     }
   });
@@ -441,7 +441,7 @@ describe("RouteProfileSchema", () => {
       url: "http://example.com",
       timeoutMs: 100_000,
     };
-    expect(() => RouteProfileSchema.parse(input)).toThrow();
+    expect(() => DestinationSchema.parse(input)).toThrow();
   });
 
   it("should reject negative timeout", () => {
@@ -449,16 +449,16 @@ describe("RouteProfileSchema", () => {
       url: "http://example.com",
       timeoutMs: -1000,
     };
-    expect(() => RouteProfileSchema.parse(input)).toThrow();
+    expect(() => DestinationSchema.parse(input)).toThrow();
   });
 });
 
 // ============================================================================
-// RoutesConfig Tests
+// DestinationsConfig Tests
 // ============================================================================
 
-describe("RoutesConfigSchema", () => {
-  it("should parse a valid RoutesConfig", () => {
+describe("DestinationsConfigSchema", () => {
+  it("should parse a valid DestinationsConfig", () => {
     const input = {
       profiles: {
         store_only: {
@@ -474,39 +474,39 @@ describe("RoutesConfigSchema", () => {
         },
       },
     };
-    const result = RoutesConfigSchema.parse(input);
+    const result = DestinationsConfigSchema.parse(input);
     expect(result).toEqual(input);
   });
 
   it("should reject missing profiles", () => {
     const input = {};
-    expect(() => RoutesConfigSchema.parse(input)).toThrow();
+    expect(() => DestinationsConfigSchema.parse(input)).toThrow();
   });
 
   it("should accept empty profiles object", () => {
     const input = {
       profiles: {},
     };
-    const result = RoutesConfigSchema.parse(input);
+    const result = DestinationsConfigSchema.parse(input);
     expect(result.profiles).toEqual({});
   });
 });
 
 // ============================================================================
-// NewItemInput Tests
+// NewMessageInput Tests
 // ============================================================================
 
-describe("NewItemInputSchema", () => {
-  it("should parse a minimal NewItemInput", () => {
+describe("NewMessageInputSchema", () => {
+  it("should parse a minimal NewMessageInput", () => {
     const input = {
       type: "update",
       payload: { text: "Hello" },
     };
-    const result = NewItemInputSchema.parse(input);
+    const result = NewMessageInputSchema.parse(input);
     expect(result).toEqual(input);
   });
 
-  it("should parse a full NewItemInput", () => {
+  it("should parse a full NewMessageInput", () => {
     const input = {
       type: "update",
       payload: { text: "Hello" },
@@ -514,7 +514,7 @@ describe("NewItemInputSchema", () => {
       source: "api",
       meta: { user_id: "123" },
     };
-    const result = NewItemInputSchema.parse(input);
+    const result = NewMessageInputSchema.parse(input);
     expect(result).toEqual(input);
   });
 
@@ -523,14 +523,14 @@ describe("NewItemInputSchema", () => {
       type: "",
       payload: {},
     };
-    expect(() => NewItemInputSchema.parse(input)).toThrow();
+    expect(() => NewMessageInputSchema.parse(input)).toThrow();
   });
 
   it("should reject missing type", () => {
     const input = {
       payload: {},
     };
-    expect(() => NewItemInputSchema.parse(input)).toThrow();
+    expect(() => NewMessageInputSchema.parse(input)).toThrow();
   });
 
   it("should allow any payload type", () => {
@@ -542,7 +542,7 @@ describe("NewItemInputSchema", () => {
       { type: "test", payload: { nested: { data: true } } },
     ];
     for (const input of inputs) {
-      expect(() => NewItemInputSchema.parse(input)).not.toThrow();
+      expect(() => NewMessageInputSchema.parse(input)).not.toThrow();
     }
   });
 });
@@ -683,7 +683,7 @@ describe("AttachmentEnvelopeSchema", () => {
   });
 });
 
-describe("ItemEnvelopeSchema", () => {
+describe("MessageEnvelopeSchema", () => {
   it("should parse a valid item envelope", () => {
     const input = {
       id: "01HP123",
@@ -695,7 +695,7 @@ describe("ItemEnvelopeSchema", () => {
       meta: { user_id: "123" },
       createdAt: "2025-11-22T12:34:56.789Z",
     };
-    const result = ItemEnvelopeSchema.parse(input);
+    const result = MessageEnvelopeSchema.parse(input);
     expect(result).toEqual(input);
   });
 
@@ -707,7 +707,7 @@ describe("ItemEnvelopeSchema", () => {
       payload: {},
       createdAt: "2025-11-22T12:34:56.789Z",
     };
-    const result = ItemEnvelopeSchema.parse(input);
+    const result = MessageEnvelopeSchema.parse(input);
     expect(result.attachments).toEqual([]);
   });
 
@@ -719,11 +719,11 @@ describe("ItemEnvelopeSchema", () => {
       payload: {},
       createdAt: "not-a-datetime",
     };
-    expect(() => ItemEnvelopeSchema.parse(input)).toThrow();
+    expect(() => MessageEnvelopeSchema.parse(input)).toThrow();
   });
 });
 
-describe("ItemIndexRowSchema", () => {
+describe("MessageIndexRowSchema", () => {
   it("should parse a valid item index row", () => {
     const input = {
       id: "01HP123",
@@ -734,11 +734,11 @@ describe("ItemIndexRowSchema", () => {
       fileDir: "/home/workspace/Inbox/files/Updates/2025-11-22/01HP123",
       attachmentsCount: 2,
       hasAttachments: true,
-      claimedBy: "worker-1",
-      claimedAt: "2025-11-22T12:35:00.000Z",
+      subscribedBy: "worker-1",
+      subscribedAt: "2025-11-22T12:35:00.000Z",
       summary: "Quick summary",
     };
-    const result = ItemIndexRowSchema.parse(input);
+    const result = MessageIndexRowSchema.parse(input);
     expect(result).toEqual(input);
   });
 
@@ -753,9 +753,9 @@ describe("ItemIndexRowSchema", () => {
       attachmentsCount: 0,
       hasAttachments: false,
     };
-    const result = ItemIndexRowSchema.parse(input);
-    expect(result.claimedBy).toBeUndefined();
-    expect(result.claimedAt).toBeUndefined();
+    const result = MessageIndexRowSchema.parse(input);
+    expect(result.subscribedBy).toBeUndefined();
+    expect(result.subscribedAt).toBeUndefined();
     expect(result.summary).toBeUndefined();
   });
 
@@ -770,11 +770,11 @@ describe("ItemIndexRowSchema", () => {
       attachmentsCount: -1,
       hasAttachments: false,
     };
-    expect(() => ItemIndexRowSchema.parse(input)).toThrow();
+    expect(() => MessageIndexRowSchema.parse(input)).toThrow();
   });
 });
 
-describe("ItemViewSchema", () => {
+describe("MessageViewSchema", () => {
   it("should parse a valid item view", () => {
     const input = {
       id: "01HP123",
@@ -784,7 +784,7 @@ describe("ItemViewSchema", () => {
       hasAttachments: true,
       attachmentsCount: 2,
     };
-    const result = ItemViewSchema.parse(input);
+    const result = MessageViewSchema.parse(input);
     expect(result).toEqual(input);
   });
 
@@ -797,11 +797,11 @@ describe("ItemViewSchema", () => {
       hasAttachments: false,
       attachmentsCount: 0,
     };
-    expect(() => ItemViewSchema.parse(input)).toThrow();
+    expect(() => MessageViewSchema.parse(input)).toThrow();
   });
 });
 
-describe("ItemFiltersSchema", () => {
+describe("MessageFiltersSchema", () => {
   it("should parse all filter fields", () => {
     const input = {
       type: "update",
@@ -809,23 +809,23 @@ describe("ItemFiltersSchema", () => {
       since: "2025-11-22T00:00:00.000Z",
       until: "2025-11-22T23:59:59.999Z",
     };
-    const result = ItemFiltersSchema.parse(input);
+    const result = MessageFiltersSchema.parse(input);
     expect(result).toEqual(input);
   });
 
   it("should accept empty filters", () => {
     const input = {};
-    const result = ItemFiltersSchema.parse(input);
+    const result = MessageFiltersSchema.parse(input);
     expect(result).toEqual({});
   });
 
   it("should reject invalid datetime in since/until", () => {
-    expect(() => ItemFiltersSchema.parse({ since: "not-a-date" })).toThrow();
-    expect(() => ItemFiltersSchema.parse({ until: "not-a-date" })).toThrow();
+    expect(() => MessageFiltersSchema.parse({ since: "not-a-date" })).toThrow();
+    expect(() => MessageFiltersSchema.parse({ until: "not-a-date" })).toThrow();
   });
 });
 
-describe("QueryItemsResultSchema", () => {
+describe("QueryMessagesResultSchema", () => {
   it("should parse a valid query result", () => {
     const input = {
       items: [
@@ -840,7 +840,7 @@ describe("QueryItemsResultSchema", () => {
       ],
       nextCursor: "base64cursor",
     };
-    const result = QueryItemsResultSchema.parse(input);
+    const result = QueryMessagesResultSchema.parse(input);
     expect(result).toEqual(input);
   });
 
@@ -849,7 +849,7 @@ describe("QueryItemsResultSchema", () => {
       items: [],
       nextCursor: null,
     };
-    const result = QueryItemsResultSchema.parse(input);
+    const result = QueryMessagesResultSchema.parse(input);
     expect(result.nextCursor).toBeNull();
   });
 });

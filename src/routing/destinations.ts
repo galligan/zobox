@@ -1,11 +1,15 @@
 import { logger } from "../logger.js";
-import type { ItemEnvelope, RouteProfile, RoutesConfig } from "../types";
+import type {
+  MessageEnvelope,
+  Destination,
+  DestinationsConfig,
+} from "../types";
 
 /**
  * Result of route profile validation
  */
 export type ValidateProfileResult =
-  | { valid: true; profile: RouteProfile }
+  | { valid: true; profile: Destination }
   | { valid: false; reason: string };
 
 /**
@@ -23,9 +27,9 @@ export type InvokeHttpResult =
  * @param routesConfig - Routes configuration containing profiles
  * @returns Validation result with profile data or failure reason
  */
-export function validateRouteProfile(
+export function validateDestination(
   profileName: string,
-  routesConfig?: RoutesConfig
+  routesConfig?: DestinationsConfig
 ): ValidateProfileResult {
   // Store-only profiles always pass validation but don't need routing
   if (!profileName || profileName === "store_only") {
@@ -75,8 +79,8 @@ export function validateRouteProfile(
  */
 export async function invokeHttpProfile(
   _profileName: string,
-  profile: RouteProfile,
-  envelope: ItemEnvelope
+  profile: Destination,
+  envelope: MessageEnvelope
 ): Promise<InvokeHttpResult> {
   if (!profile.url) {
     return { success: false, error: "Profile missing URL" };
@@ -137,10 +141,10 @@ export async function invokeHttpProfile(
  */
 export async function routeItem(
   profileName: string,
-  envelope: ItemEnvelope,
-  routesConfig?: RoutesConfig
+  envelope: MessageEnvelope,
+  routesConfig?: DestinationsConfig
 ): Promise<void> {
-  const validation = validateRouteProfile(profileName, routesConfig);
+  const validation = validateDestination(profileName, routesConfig);
 
   if (!validation.valid) {
     // Only log warnings for actual failures, not store_only

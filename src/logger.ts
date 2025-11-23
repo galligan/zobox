@@ -1,5 +1,5 @@
 /**
- * Structured logger for Zorter service.
+ * Structured logger for Zobox service.
  * Outputs JSON-formatted logs with timestamps, levels, and metadata.
  */
 
@@ -25,7 +25,7 @@ type LogEntry = {
  * Defaults to "info" in production, "debug" in development.
  */
 function getLogLevel(): LogLevel {
-  const envLevel = process.env.ZORTER_LOG_LEVEL?.toLowerCase();
+  const envLevel = process.env.ZOBOX_LOG_LEVEL?.toLowerCase();
   const validLevels: LogLevel[] = ["debug", "info", "warn", "error"];
 
   if (envLevel && validLevels.includes(envLevel as LogLevel)) {

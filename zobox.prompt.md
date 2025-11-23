@@ -1,11 +1,11 @@
 
-# Zorter: Configure
+# Zobox: Configure
 
-You are configuring the Zorter inbox + sorter + router engine that runs as a User Service on my Zo.
+You are configuring the Zobox inbox + sorter + router engine that runs as a User Service on my Zo.
 
-Zorter is driven by a TOML config file at:
+Zobox is driven by a TOML config file at:
 
-- `/home/workspace/Inbox/zorter.config.toml`
+- `/home/workspace/Inbox/zobox.config.toml`
 
 and optional routing config:
 
@@ -23,13 +23,13 @@ and optional routing config:
 
 1. **Understand the intent**
 
-   - Ask me *once* what I want to change in Zorter (type, workflow, files, auth, or routes).
+   - Ask me *once* what I want to change in Zobox (type, workflow, files, auth, or routes).
    - Summarize the change you plan to make before editing files.
 
 2. **Load current config**
 
-   - Read `/home/workspace/Inbox/zorter.config.toml`.
-   - If the file does not exist, copy `config/zorter.config.example.toml` from this repo into `/home/workspace/Inbox/zorter.config.toml` and then read it.
+   - Read `/home/workspace/Inbox/zobox.config.toml`.
+   - If the file does not exist, copy `config/zobox.config.example.toml` from this repo into `/home/workspace/Inbox/zobox.config.toml` and then read it.
 
 3. **Modify config**
 
@@ -70,6 +70,6 @@ and optional routing config:
    - Report back:
      - Which sections you changed.
      - New/updated types, workflows, and route profiles.
-     - Any manual steps I should take next (e.g. restart the Zorter service, update env vars).
+     - Any manual steps I should take next (e.g. restart the Zobox service, update env vars).
 
 Use concise, technical language. Prefer editing the existing config over inventing new abstractions.

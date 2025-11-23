@@ -1,6 +1,6 @@
-# Zorter Documentation
+# Zobox Documentation
 
-Complete documentation for the Zorter inbox + sorter + router engine.
+Complete documentation for the Zobox inbox + sorter + router engine.
 
 ## Documentation Index
 
@@ -27,7 +27,7 @@ Complete HTTP API documentation covering:
 
 Comprehensive configuration reference covering:
 
-- TOML schema for all sections (`[zorter]`, `[auth]`, `[files]`, `[types.*]`, `[workflows.*]`)
+- TOML schema for all sections (`[zobox]`, `[auth]`, `[files]`, `[types.*]`, `[workflows.*]`)
 - Path template tokens (`{channel}`, `{date}`, `{eventId}`, `{filename}`)
 - Filename strategies (original, timestampPrefix, eventIdPrefix, uuid)
 - Route profiles (HTTP, noop)
@@ -43,7 +43,7 @@ Comprehensive configuration reference covering:
 
 ## Quick Start
 
-New to Zorter? Start here:
+New to Zobox? Start here:
 
 1. Read the [main README](../README.md) for quick setup
 2. Review the [API Reference](API.md) to understand available endpoints
@@ -80,7 +80,7 @@ Configure in `routes.json`:
   "profiles": {
     "publish_to_worker": {
       "kind": "http",
-      "url": "https://api.example.com/webhooks/zorter"
+      "url": "https://api.example.com/webhooks/zobox"
     }
   }
 }
@@ -117,7 +117,7 @@ See: [POST /items - Mode C](API.md#mode-c-multipart-form-data)
 
 - **[SPEC.md](../SPEC.md)**: Original specification and design philosophy
 - **[AGENTS.md](../AGENTS.md)**: Repository guidelines for AI agents
-- **[zorter.prompt.md](../zorter.prompt.md)**: Configuration prompt for agents
+- **[zobox.prompt.md](../zobox.prompt.md)**: Configuration prompt for agents
 
 ## Getting Help
 
@@ -127,7 +127,7 @@ See: [POST /items - Mode C](API.md#mode-c-multipart-form-data)
 
 ## Contributing
 
-Zorter is open source. To contribute:
+Zobox is open source. To contribute:
 
 1. Fork the repository
 2. Make changes and add tests

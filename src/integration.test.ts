@@ -19,7 +19,7 @@ describe("Error handling and logging integration", () => {
       // Mock implementation
     });
     originalEnv = { ...process.env };
-    process.env.ZORTER_LOG_LEVEL = "debug";
+    process.env.ZOBOX_LOG_LEVEL = "debug";
   });
 
   afterEach(() => {

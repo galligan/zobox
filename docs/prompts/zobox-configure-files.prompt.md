@@ -1,14 +1,14 @@
 ---
-name: Zorter - Configure Files
+name: Zobox - Configure Files
 description: Guide agent through configuring attachment storage and file handling
 version: 1.0.0
 ---
 
-# Zorter: Configure Files
+# Zobox: Configure Files
 
-You are helping configure the **files section** in Zorter, which controls how attachments are stored, named, and organized.
+You are helping configure the **files section** in Zobox, which controls how attachments are stored, named, and organized.
 
-The `[files]` section in `zorter.config.toml` defines global attachment behavior, while individual workflows can override the path template for specific item types.
+The `[files]` section in `zobox.config.toml` defines global attachment behavior, while individual workflows can override the path template for specific item types.
 
 ## Inputs
 
@@ -40,8 +40,8 @@ Summarize the changes you'll make before proceeding.
 
 ### 2. Load current config
 
-- Read `/home/workspace/Inbox/zorter.config.toml`
-- If it doesn't exist, copy `config/zorter.config.example.toml` from the Zorter repo
+- Read `/home/workspace/Inbox/zobox.config.toml`
+- If it doesn't exist, copy `config/zobox.config.example.toml` from the Zobox repo
 - Examine the current `[files]` section
 
 ### 3. Files section structure
@@ -178,10 +178,10 @@ path_template = "{baseFilesDir}/{channel}/{date}/{eventId}/{filename}"
 filename_strategy = "original"
 keep_base64_in_envelope = false
 ```
-- Zorter will not store any attachments
+- Zobox will not store any attachments
 - Items can still be ingested, but files are ignored
 
-### 7. Update zorter.config.toml
+### 7. Update zobox.config.toml
 
 Modify the `[files]` section:
 
@@ -222,7 +222,7 @@ Storage pattern:
 - Filename example: <example filename>
 
 Next steps:
-1. Restart Zorter service to apply changes
+1. Restart Zobox service to apply changes
 2. Test attachment storage with a sample item
 3. Verify files appear in expected location
 4. Check disk usage if keep_base64_in_envelope is enabled
@@ -234,7 +234,7 @@ Next steps:
 - Check that `base_files_dir` exists or can be created
 - Verify path template tokens are correct
 - Ensure `enabled = true` in config
-- Check Zorter logs for permission errors
+- Check Zobox logs for permission errors
 
 **Problem: Filename collisions**
 - Use `{eventId}` in path template for unique folders per item
@@ -270,7 +270,7 @@ Changes:
 Example result:
 - Path: /home/workspace/Inbox/files/2025-11-22/Tasks/550e.../20251122T123456_document.pdf
 
-Proceeding to update zorter.config.toml...
+Proceeding to update zobox.config.toml...
 ```
 
 Update to:

@@ -1,14 +1,14 @@
 ---
-name: Zorter - Add Route
+name: Zobox - Add Route
 description: Guide agent to create or update HTTP routing profiles for item workflows
 version: 1.0.0
 ---
 
-# Zorter: Add Route
+# Zobox: Add Route
 
-You are helping create or update a **route profile** in Zorter's `routes.json` configuration.
+You are helping create or update a **route profile** in Zobox's `routes.json` configuration.
 
-Route profiles define external HTTP endpoints where Zorter can send item envelopes. Workflows reference these profiles via the `route_profile` field to enable outbound routing.
+Route profiles define external HTTP endpoints where Zobox can send item envelopes. Workflows reference these profiles via the `route_profile` field to enable outbound routing.
 
 ## Inputs
 
@@ -91,7 +91,7 @@ Create a new profile entry. Example:
     "publish_to_worker": {
       "kind": "http",
       "description": "POST item envelope to worker service.",
-      "url": "http://localhost:9000/zorter/items",
+      "url": "http://localhost:9000/zobox/items",
       "method": "POST",
       "headers": {
         "content-type": "application/json",
@@ -206,11 +206,11 @@ Configuration:
 Connectivity test: <passed/failed/skipped>
 
 Next steps:
-1. Ensure endpoint is reachable from Zorter server
+1. Ensure endpoint is reachable from Zobox server
 2. Reference this profile in a workflow: route_profile = "<profileName>"
-3. Restart Zorter service to load new routes.json
+3. Restart Zobox service to load new routes.json
 4. Test by sending an item that uses this workflow
-5. Check Zorter logs for routing success/failure
+5. Check Zobox logs for routing success/failure
 6. Monitor endpoint logs to verify items are arriving
 ```
 
@@ -257,7 +257,7 @@ Next steps:
   "headers": {
     "authorization": "Bearer long-lived-token",
     "content-type": "application/json",
-    "x-source": "zorter"
+    "x-source": "zobox"
   },
   "enabled": true,
   "timeoutMs": 15000
@@ -269,7 +269,7 @@ Next steps:
 {
   "kind": "http",
   "description": "Local dev server",
-  "url": "http://localhost:3000/api/zorter",
+  "url": "http://localhost:3000/api/zobox",
   "method": "POST",
   "enabled": true,
   "timeoutMs": 5000
@@ -282,10 +282,10 @@ When creating routes, remind users:
 
 1. **API keys in headers**: Store sensitive tokens in environment variables, not directly in routes.json
 2. **HTTPS in production**: Use `https://` URLs for production endpoints
-3. **Network access**: Ensure Zorter server can reach the endpoint (firewall, VPN, etc.)
+3. **Network access**: Ensure Zobox server can reach the endpoint (firewall, VPN, etc.)
 4. **Endpoint validation**: Target endpoint should validate incoming requests
 5. **Rate limiting**: Consider rate limits on both sides
-6. **Timeout values**: Set appropriate timeouts to avoid blocking Zorter
+6. **Timeout values**: Set appropriate timeouts to avoid blocking Zobox
 
 **Better approach for secrets:**
 
@@ -307,12 +307,12 @@ Recommend:
 }
 ```
 
-(Note: Current Zorter version doesn't support env var expansion in routes.json, but this is a good practice to document for future versions)
+(Note: Current Zobox version doesn't support env var expansion in routes.json, but this is a good practice to document for future versions)
 
 ## Troubleshooting
 
 **Problem: Route not working**
-- Check Zorter logs for HTTP errors
+- Check Zobox logs for HTTP errors
 - Verify endpoint is reachable: `curl -v <url>`
 - Confirm `enabled: true` in profile
 - Check workflow references correct `route_profile` name
@@ -334,7 +334,7 @@ Recommend:
 - Verify workflow has `route_profile` field set
 - Check route name matches profile name exactly
 - Confirm `kind: "http"` (not `"noop"`)
-- Restart Zorter after routes.json changes
+- Restart Zobox after routes.json changes
 
 ## Example interaction
 

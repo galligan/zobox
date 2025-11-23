@@ -2,17 +2,17 @@
 
 ## Project Structure & Modules
 - `src/server.ts` is the Hono HTTP entrypoint; depends on `config.ts` (env + TOML), `storage.ts` (SQLite/filesystem), and `workflows.ts` (routing logic). Types live in `src/types.ts`.
-- `bin/zorter.ts` is the CLI shim invoked by `bunx zorter`.
-- `config/zorter.config.example.toml` is the canonical profile; copy it next to your chosen `ZORTER_BASE_DIR` and adjust.
-- `db/migrations/001_init.sql` seeds the SQLite schema used in the base dir’s `db/zorter.db`.
-- Specs and prompts: `SPEC.md` (service contract) and `zorter.prompt.md` (agent context).
+- `bin/zobox.ts` is the CLI shim invoked by `bunx zobox`.
+- `config/zobox.config.example.toml` is the canonical profile; copy it next to your chosen `ZOBOX_BASE_DIR` and adjust.
+- `db/migrations/001_init.sql` seeds the SQLite schema used in the base dir’s `db/zobox.db`.
+- Specs and prompts: `SPEC.md` (service contract) and `zobox.prompt.md` (agent context).
 
 ## Setup & Local Run
 - Prereq: Bun (>=1.1). Install deps with `bun install`.
 - Create a base dir (defaults to `/home/workspace/Inbox`) and copy config/migration files there:
-  `cp config/zorter.config.example.toml $ZORTER_BASE_DIR/zorter.config.toml`
-  `cp db/migrations/001_init.sql $ZORTER_BASE_DIR/db/migrations/001_init.sql`
-- Required env: `ZORTER_ADMIN_API_KEY`; optional read-only: `ZORTER_READ_API_KEY`; set `ZORTER_BASE_DIR` when running outside the default path.
+  `cp config/zobox.config.example.toml $ZOBOX_BASE_DIR/zobox.config.toml`
+  `cp db/migrations/001_init.sql $ZOBOX_BASE_DIR/db/migrations/001_init.sql`
+- Required env: `ZOBOX_ADMIN_API_KEY`; optional read-only: `ZOBOX_READ_API_KEY`; set `ZOBOX_BASE_DIR` when running outside the default path.
 - Run locally: `bun run src/server.ts` (or `bun run dev`), listens on 8787 by default.
 
 ## Build, Test, and Development Commands
@@ -38,4 +38,4 @@
 
 ## Security & Configuration Tips
 - Never commit real API keys or base-dir contents. Add local secrets to `.env` or deployment env vars.
-- Base dir layout (default): `inbox/` envelopes, `files/` attachments, `db/` for SQLite, `logs/` for access/error logs—keep paths consistent with `zorter.config.toml`.
+- Base dir layout (default): `inbox/` envelopes, `files/` attachments, `db/` for SQLite, `logs/` for access/error logs—keep paths consistent with `zobox.config.toml`.

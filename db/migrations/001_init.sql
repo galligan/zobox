@@ -1,6 +1,6 @@
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS items (
+CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,
   channel TEXT NOT NULL,
@@ -9,12 +9,14 @@ CREATE TABLE IF NOT EXISTS items (
   file_dir TEXT,
   attachments_count INTEGER NOT NULL DEFAULT 0,
   has_attachments INTEGER NOT NULL DEFAULT 0,
-  claimed_by TEXT,
-  claimed_at TEXT,
-  summary TEXT
+  subscribed_by TEXT,
+  subscribed_at TEXT,
+  summary TEXT,
+  tags TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_items_created_at ON items (created_at);
-CREATE INDEX IF NOT EXISTS idx_items_type ON items (type);
-CREATE INDEX IF NOT EXISTS idx_items_channel ON items (channel);
-CREATE INDEX IF NOT EXISTS idx_items_has_attachments ON items (has_attachments);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages (created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_type ON messages (type);
+CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages (channel);
+CREATE INDEX IF NOT EXISTS idx_messages_has_attachments ON messages (has_attachments);
+CREATE INDEX IF NOT EXISTS idx_messages_tags ON messages (tags);

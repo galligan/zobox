@@ -6,16 +6,20 @@ import { describe, expect, it } from "bun:test";
 import { Hono } from "hono";
 import { ValidationError } from "../errors.js";
 import type { Storage } from "../storage.js";
-import type { ItemEnvelope, NewItemInput, ZorterConfig } from "../types.js";
+import type {
+  MessageEnvelope,
+  NewMessageInput,
+  ZoboxConfig,
+} from "../types.js";
 import {
-  createItemEnvelope,
+  createMessageEnvelope,
   type ItemMetadata,
   parseJsonRequest,
   parseMultipartRequest,
-  processAndStoreItem,
+  processAndStoreMessage,
   type RuntimeContext,
-  toItemView,
-} from "./items.js";
+  toMessageView,
+} from "./messages.js";
 
 describe("parseMultipartRequest", () => {
   it("should parse valid multipart request with event field", async () => {
@@ -198,9 +202,9 @@ describe("parseJsonRequest", () => {
   });
 });
 
-describe("createItemEnvelope", () => {
+describe("createMessageEnvelope", () => {
   it("should create envelope with all fields", () => {
-    const item: NewItemInput = {
+    const item: NewMessageInput = {
       type: "task",
       payload: { title: "Test" },
       channel: "work",
@@ -220,7 +224,11 @@ describe("createItemEnvelope", () => {
       attachmentsDir: null,
     };
 
-    const envelope = createItemEnvelope(item, metadata, processedAttachments);
+    const envelope = createMessageEnvelope(
+      item,
+      metadata,
+      processedAttachments
+    );
 
     expect(envelope.id).toBe("test-id");
     expect(envelope.type).toBe("task");
@@ -233,7 +241,7 @@ describe("createItemEnvelope", () => {
   });
 
   it("should use default source if not provided", () => {
-    const item: NewItemInput = {
+    const item: NewMessageInput = {
       type: "note",
       payload: { text: "Hello" },
     };
@@ -250,13 +258,17 @@ describe("createItemEnvelope", () => {
       attachmentsDir: null,
     };
 
-    const envelope = createItemEnvelope(item, metadata, processedAttachments);
+    const envelope = createMessageEnvelope(
+      item,
+      metadata,
+      processedAttachments
+    );
 
     expect(envelope.source).toBe("api");
   });
 
   it("should include attachments in envelope", () => {
-    const item: NewItemInput = {
+    const item: NewMessageInput = {
       type: "document",
       payload: { name: "Report" },
     };
@@ -283,16 +295,20 @@ describe("createItemEnvelope", () => {
       attachmentsDir: "/files",
     };
 
-    const envelope = createItemEnvelope(item, metadata, processedAttachments);
+    const envelope = createMessageEnvelope(
+      item,
+      metadata,
+      processedAttachments
+    );
 
     expect(envelope.attachments).toHaveLength(1);
     expect(envelope.attachments[0].filename).toBe("report.pdf");
   });
 });
 
-describe("toItemView", () => {
+describe("toMessageView", () => {
   it("should convert envelope to view", () => {
-    const envelope: ItemEnvelope = {
+    const envelope: MessageEnvelope = {
       id: "item-1",
       type: "task",
       source: "api",
@@ -311,7 +327,7 @@ describe("toItemView", () => {
       createdAt: "2025-11-22T12:00:00Z",
     };
 
-    const view = toItemView(envelope);
+    const view = toMessageView(envelope);
 
     expect(view.id).toBe("item-1");
     expect(view.type).toBe("task");
@@ -322,7 +338,7 @@ describe("toItemView", () => {
   });
 
   it("should handle items without attachments", () => {
-    const envelope: ItemEnvelope = {
+    const envelope: MessageEnvelope = {
       id: "item-2",
       type: "note",
       source: "api",
@@ -332,14 +348,14 @@ describe("toItemView", () => {
       createdAt: "2025-11-22T13:00:00Z",
     };
 
-    const view = toItemView(envelope);
+    const view = toMessageView(envelope);
 
     expect(view.hasAttachments).toBe(false);
     expect(view.attachmentsCount).toBe(0);
   });
 });
 
-describe("integration: processAndStoreItem", () => {
+describe("integration: processAndStoreMessage", () => {
   it("should process item without attachments", () => {
     // Create minimal mock runtime
     const mockStorage: Partial<Storage> = {
@@ -347,17 +363,17 @@ describe("integration: processAndStoreItem", () => {
       inboxDir: "/test/inbox",
       filesDir: "/test/files",
       db: null as any,
-      // Mock writeEnvelope and insertItemIndex
+      // Mock writeEnvelope and insertMessageIndex
     };
 
-    const mockConfig: Partial<ZorterConfig> = {
+    const mockConfig: Partial<ZoboxConfig> = {
       zorter: {
         base_dir: "/test",
-        db_path: "/test/db/zorter.db",
+        db_path: "/test/db/zobox.db",
         default_channel: "default",
       },
       auth: {
-        admin_api_key_env_var: "ZORTER_ADMIN_API_KEY",
+        admin_api_key_env_var: "ZOBOX_ADMIN_API_KEY",
         required: true,
       },
       files: {
@@ -368,22 +384,22 @@ describe("integration: processAndStoreItem", () => {
         keep_base64_in_envelope: false,
       },
       types: {},
-      workflows: {},
+      sorters: {},
     };
 
     const _runtime: RuntimeContext = {
-      config: mockConfig as ZorterConfig,
+      config: mockConfig as ZoboxConfig,
       storage: mockStorage as Storage,
     };
 
-    const _item: NewItemInput = {
+    const _item: NewMessageInput = {
       type: "task",
       payload: { title: "Test task" },
     };
 
     // This test verifies the function signature and flow
     // Full integration testing requires a real database and filesystem
-    expect(processAndStoreItem).toBeDefined();
-    expect(typeof processAndStoreItem).toBe("function");
+    expect(processAndStoreMessage).toBeDefined();
+    expect(typeof processAndStoreMessage).toBe("function");
   });
 });

@@ -9,13 +9,13 @@ import os from "node:os";
 import path from "node:path";
 import { Hono } from "hono";
 import { initStorage } from "../storage.js";
-import type { ZorterConfig } from "../types.js";
+import type { ZoboxConfig } from "../types.js";
 import {
   parseRequest,
-  processAndStoreItem,
+  processAndStoreMessage,
   type RuntimeContext,
-  toItemView,
-} from "./items.js";
+  toMessageView,
+} from "./messages.js";
 
 describe("POST /items handler integration", () => {
   let tempDir: string;
@@ -37,14 +37,14 @@ describe("POST /items handler integration", () => {
       path.join(migrationsDir, "001_init.sql")
     );
 
-    const config: ZorterConfig = {
+    const config: ZoboxConfig = {
       zorter: {
         base_dir: tempDir,
-        db_path: path.join(tempDir, "db", "zorter.db"),
+        db_path: path.join(tempDir, "db", "zobox.db"),
         default_channel: "default",
       },
       auth: {
-        admin_api_key_env_var: "ZORTER_ADMIN_API_KEY",
+        admin_api_key_env_var: "ZOBOX_ADMIN_API_KEY",
         required: true,
       },
       files: {
@@ -60,7 +60,7 @@ describe("POST /items handler integration", () => {
           channel: "tasks",
         },
       },
-      workflows: {},
+      sorters: {},
     };
 
     const storage = initStorage(config);
@@ -99,14 +99,14 @@ describe("POST /items handler integration", () => {
     expect(item.channel).toBe("work");
     expect(attachments).toEqual([]);
 
-    const envelope = await processAndStoreItem(item, attachments, runtime);
+    const envelope = await processAndStoreMessage(item, attachments, runtime);
 
     expect(envelope.id).toBeDefined();
     expect(envelope.type).toBe("task");
     expect(envelope.channel).toBe("work");
     expect(envelope.attachments).toEqual([]);
 
-    const view = toItemView(envelope);
+    const view = toMessageView(envelope);
     expect(view.hasAttachments).toBe(false);
     expect(view.attachmentsCount).toBe(0);
 
@@ -156,13 +156,13 @@ describe("POST /items handler integration", () => {
       expect(attachments[0].base64).toBe(base64Content);
     }
 
-    const envelope = await processAndStoreItem(item, attachments, runtime);
+    const envelope = await processAndStoreMessage(item, attachments, runtime);
 
     expect(envelope.attachments).toHaveLength(1);
     expect(envelope.attachments[0].filename).toBe("hello.txt");
     expect(envelope.attachments[0].size).toBe(fileContent.length);
 
-    const view = toItemView(envelope);
+    const view = toMessageView(envelope);
     expect(view.hasAttachments).toBe(true);
     expect(view.attachmentsCount).toBe(1);
 
@@ -205,7 +205,7 @@ describe("POST /items handler integration", () => {
     expect(attachments).toHaveLength(1);
     expect(attachments[0].filename).toBe("test.txt");
 
-    const envelope = await processAndStoreItem(item, attachments, runtime);
+    const envelope = await processAndStoreMessage(item, attachments, runtime);
 
     expect(envelope.attachments).toHaveLength(1);
     expect(envelope.attachments[0].filename).toBe("test.txt");
@@ -234,7 +234,7 @@ describe("POST /items handler integration", () => {
     } as any;
 
     const { item, attachments } = await parseRequest(mockContext);
-    const envelope = await processAndStoreItem(item, attachments, runtime);
+    const envelope = await processAndStoreMessage(item, attachments, runtime);
 
     // Should use channel from type definition
     expect(envelope.channel).toBe("tasks");
@@ -275,13 +275,13 @@ describe("POST /items handler integration", () => {
 
     expect(attachments).toHaveLength(2);
 
-    const envelope = await processAndStoreItem(item, attachments, runtime);
+    const envelope = await processAndStoreMessage(item, attachments, runtime);
 
     expect(envelope.attachments).toHaveLength(2);
     expect(envelope.attachments[0].filename).toBe("data.csv");
     expect(envelope.attachments[1].filename).toBe("summary.pdf");
 
-    const view = toItemView(envelope);
+    const view = toMessageView(envelope);
     expect(view.attachmentsCount).toBe(2);
   });
 });

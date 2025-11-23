@@ -1,21 +1,21 @@
 # Error Handling & Structured Logging
 
-This document describes the error handling and structured logging implementation in Zorter.
+This document describes the error handling and structured logging implementation in Zobox.
 
 ## Error Hierarchy
 
-All Zorter errors extend from `ZorterError`, which includes:
+All Zobox errors extend from `ZoboxError`, which includes:
 - `message`: Human-readable error description
 - `code`: Machine-readable error code for debugging
 - `statusCode`: HTTP status code for API responses
 
 ### Error Classes
 
-#### `ZorterError`
-Base error class for all Zorter-specific errors.
+#### `ZoboxError`
+Base error class for all Zobox-specific errors.
 
 ```typescript
-throw new ZorterError("Something went wrong", "GENERIC_ERROR", 500);
+throw new ZoboxError("Something went wrong", "GENERIC_ERROR", 500);
 ```
 
 #### `ValidationError` (400)
@@ -66,7 +66,7 @@ The logger outputs JSON-formatted logs with timestamps, levels, and metadata.
 
 ### Log Levels
 
-Controlled via `ZORTER_LOG_LEVEL` environment variable:
+Controlled via `ZOBOX_LOG_LEVEL` environment variable:
 - `debug`: Development diagnostics (default in dev)
 - `info`: Normal operations (default in production)
 - `warn`: Unexpected but handled situations

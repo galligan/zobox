@@ -17,27 +17,27 @@ import type {
   BinaryAttachmentInput as ZodBinaryAttachmentInput,
   FilenameStrategy as ZodFilenameStrategy,
   FilesSection as ZodFilesSection,
-  ItemEnvelope as ZodItemEnvelope,
-  ItemFilters as ZodItemFilters,
-  ItemIndexRow as ZodItemIndexRow,
-  ItemView as ZodItemView,
-  NewItemInput as ZodNewItemInput,
-  QueryItemsResult as ZodQueryItemsResult,
-  RouteProfile as ZodRouteProfile,
-  RoutesConfig as ZodRoutesConfig,
+  MessageEnvelope as ZodMessageEnvelope,
+  MessageFilters as ZodMessageFilters,
+  MessageIndexRow as ZodMessageIndexRow,
+  MessageView as ZodMessageView,
+  NewMessageInput as ZodNewMessageInput,
+  QueryMessagesResult as ZodQueryMessagesResult,
+  Destination as ZodDestination,
+  DestinationsConfig as ZodDestinationsConfig,
   TypeDefinition as ZodTypeDefinition,
-  WorkflowDefinition as ZodWorkflowDefinition,
-  ZorterConfig as ZodZorterConfig,
-  ZorterSection as ZodZorterSection,
+  SorterDefinition as ZodSorterDefinition,
+  ZoboxConfig as ZodZoboxConfig,
+  ZoboxSection as ZodZoboxSection,
 } from "./schemas";
 
 // Configuration types
 
 /**
- * Core Zorter configuration section.
+ * Core Zobox configuration section.
  * Defines base directory, database path, and default channel.
  */
-export type ZorterSection = ZodZorterSection;
+export type ZoboxSection = ZodZoboxSection;
 
 /**
  * Authentication configuration section.
@@ -70,13 +70,13 @@ export type TypeDefinition = ZodTypeDefinition;
  * Workflow definition configuring side effects for item types.
  * Supports file appending and HTTP routing.
  */
-export type WorkflowDefinition = ZodWorkflowDefinition;
+export type SorterDefinition = ZodSorterDefinition;
 
 /**
- * Complete Zorter configuration loaded from TOML.
+ * Complete Zobox configuration loaded from TOML.
  * Contains all configuration sections with validated defaults.
  */
-export type ZorterConfig = ZodZorterConfig;
+export type ZoboxConfig = ZodZoboxConfig;
 
 // Attachment input types
 
@@ -110,31 +110,31 @@ export type AttachmentEnvelope = ZodAttachmentEnvelope;
  * Complete item envelope containing payload, attachments, and metadata.
  * This is the canonical representation of an item stored in the inbox.
  */
-export type ItemEnvelope = ZodItemEnvelope;
+export type MessageEnvelope = ZodMessageEnvelope;
 
 /**
  * Item index row stored in SQLite for fast querying.
  * Contains denormalized metadata without full payload.
  */
-export type ItemIndexRow = ZodItemIndexRow;
+export type MessageIndexRow = ZodMessageIndexRow;
 
 /**
  * Lightweight item view returned by list/query endpoints.
  * Contains only essential metadata, not full payload.
  */
-export type ItemView = ZodItemView;
+export type MessageView = ZodMessageView;
 
 /**
  * Query filters for listing items.
  * Supports filtering by type, channel, and time range.
  */
-export type ItemFilters = ZodItemFilters;
+export type MessageFilters = ZodMessageFilters;
 
 /**
  * Paginated query result with items and next cursor.
  * Used for cursor-based pagination in list endpoints.
  */
-export type QueryItemsResult = ZodQueryItemsResult;
+export type QueryMessagesResult = ZodQueryMessagesResult;
 
 // Routes configuration types
 
@@ -142,13 +142,13 @@ export type QueryItemsResult = ZodQueryItemsResult;
  * Routes configuration loaded from routes.json.
  * Defines HTTP routing profiles for workflow integration.
  */
-export type RoutesConfig = ZodRoutesConfig;
+export type DestinationsConfig = ZodDestinationsConfig;
 
 /**
  * HTTP route profile for posting items to external systems.
  * Configures URL, method, headers, and timeout.
  */
-export type RouteProfile = ZodRouteProfile;
+export type Destination = ZodDestination;
 
 // API input types
 
@@ -156,7 +156,7 @@ export type RouteProfile = ZodRouteProfile;
  * Input payload for creating a new item via POST /items.
  * Contains type, payload, optional channel, source, and metadata.
  */
-export type NewItemInput = ZodNewItemInput;
+export type NewMessageInput = ZodNewMessageInput;
 
 // Context types
 

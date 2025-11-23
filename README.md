@@ -1,12 +1,12 @@
-# Zorter
+# Zobox
 
-Zorter is a Zo-native, open-source inbox + sorter + router engine. It accepts arbitrary structured JSON items with optional file attachments, stores them durably, and routes them according to configurable workflows.
+Zobox is a Zo-native, open-source inbox + sorter + router engine. It accepts arbitrary structured JSON items with optional file attachments, stores them durably, and routes them according to configurable workflows.
 
 ## Features
 
 - **Single ingestion endpoint**: `POST /items` with multipart or JSON support
 - **Filesystem-first storage**: Envelopes in `inbox/`, attachments in `files/`, indexed by SQLite
-- **Type-driven workflows**: Define types and workflows in `zorter.config.toml`
+- **Type-driven workflows**: Define types and workflows in `zobox.config.toml`
 - **Worker polling**: `GET /items/next` for building distributed consumers
 - **Flexible routing**: Send items to webhooks, workers, or store locally
 - **Path templating**: Control attachment storage with `{channel}/{date}/{eventId}/{filename}` patterns
@@ -15,7 +15,7 @@ Zorter is a Zo-native, open-source inbox + sorter + router engine. It accepts ar
 
 ## Quick Start
 
-Get Zorter running locally in under 5 minutes:
+Get Zobox running locally in under 5 minutes:
 
 ### 1. Install Dependencies
 
@@ -32,22 +32,22 @@ npm install
 ### 2. Set Up Environment
 
 ```bash
-export ZORTER_ADMIN_API_KEY="dev-admin-key"
-export ZORTER_READ_API_KEY="dev-read-key"
+export ZOBOX_ADMIN_API_KEY="dev-admin-key"
+export ZOBOX_READ_API_KEY="dev-read-key"
 ```
 
 ### 3. Initialize Base Directory
 
 ```bash
 mkdir -p /home/workspace/Inbox/db/migrations
-cp config/zorter.config.example.toml /home/workspace/Inbox/zorter.config.toml
+cp config/zobox.config.example.toml /home/workspace/Inbox/zobox.config.toml
 cp db/migrations/001_init.sql /home/workspace/Inbox/db/migrations/001_init.sql
 ```
 
 ### 4. Start the Server
 
 ```bash
-ZORTER_BASE_DIR=/home/workspace/Inbox bun run src/server.ts
+ZOBOX_BASE_DIR=/home/workspace/Inbox bun run src/server.ts
 ```
 
 Server listens on `http://localhost:8787` by default.
@@ -57,7 +57,7 @@ Server listens on `http://localhost:8787` by default.
 ```bash
 curl -X POST "http://localhost:8787/items" \
   -H "content-type: application/json" \
-  -H "x-api-key: $ZORTER_ADMIN_API_KEY" \
+  -H "x-api-key: $ZOBOX_ADMIN_API_KEY" \
   -d '{
     "type": "update",
     "payload": { "text": "First idea" }
@@ -68,7 +68,7 @@ curl -X POST "http://localhost:8787/items" \
 
 ```bash
 curl "http://localhost:8787/items?limit=20" \
-  -H "x-api-key: $ZORTER_READ_API_KEY"
+  -H "x-api-key: $ZOBOX_READ_API_KEY"
 ```
 
 You should see your item in the response!
@@ -87,12 +87,12 @@ You should see your item in the response!
 bun install
 
 # Copy example config
-cp config/zorter.config.example.toml /home/workspace/Inbox/zorter.config.toml
+cp config/zobox.config.example.toml /home/workspace/Inbox/zobox.config.toml
 
 # Set environment variables
-export ZORTER_ADMIN_API_KEY="dev-admin-key"
-export ZORTER_READ_API_KEY="dev-read-key"
-export ZORTER_BASE_DIR="/home/workspace/Inbox"
+export ZOBOX_ADMIN_API_KEY="dev-admin-key"
+export ZOBOX_READ_API_KEY="dev-read-key"
+export ZOBOX_BASE_DIR="/home/workspace/Inbox"
 ```
 
 ### Running
@@ -112,13 +112,13 @@ bun run src/server.ts
 
 ```bash
 # Start server
-bunx zorter start
+bunx zobox start
 
 # Run migrations only
-bunx zorter migrate
+bunx zobox migrate
 
 # Help
-bunx zorter help
+bunx zobox help
 ```
 
 ### Testing
@@ -178,9 +178,9 @@ Your local customizations won't be committed (`.lefthook-local.yml` is in `.giti
 ### Project Structure
 
 ```
-zorter/
+zobox/
   bin/
-    zorter.ts              # CLI entrypoint
+    zobox.ts              # CLI entrypoint
   src/
     types.ts               # TypeScript type definitions
     config.ts              # TOML config loader
@@ -188,7 +188,7 @@ zorter/
     workflows.ts           # Workflow and routing logic
     server.ts              # Hono HTTP server
   config/
-    zorter.config.example.toml
+    zobox.config.example.toml
     routes.example.json
   db/
     migrations/
@@ -205,22 +205,22 @@ zorter/
 
 ## Zo Integration
 
-Deploy Zorter as a Zo User Service:
+Deploy Zobox as a Zo User Service:
 
 ### 1. Create User Service
 
 Configure in Zo:
 
-- **Label**: `zorter`
+- **Label**: `zobox`
 - **Type**: `http`
 - **Local port**: `8787`
-- **Entrypoint**: `bunx zorter start`
+- **Entrypoint**: `bunx zobox start`
 - **Workdir**: `/home/workspace/Inbox`
 
 ### 2. Copy Configuration Files
 
 ```bash
-cp config/zorter.config.example.toml /home/workspace/Inbox/zorter.config.toml
+cp config/zobox.config.example.toml /home/workspace/Inbox/zobox.config.toml
 cp db/migrations/001_init.sql /home/workspace/Inbox/db/migrations/001_init.sql
 ```
 
@@ -228,11 +228,11 @@ cp db/migrations/001_init.sql /home/workspace/Inbox/db/migrations/001_init.sql
 
 Add to your Zo service configuration:
 
-- `ZORTER_ADMIN_API_KEY` (required)
-- `ZORTER_READ_API_KEY` (optional, recommended)
-- `ZORTER_BASE_DIR=/home/workspace/Inbox`
+- `ZOBOX_ADMIN_API_KEY` (required)
+- `ZOBOX_READ_API_KEY` (optional, recommended)
+- `ZOBOX_BASE_DIR=/home/workspace/Inbox`
 
-Your Zorter service will start automatically with Zo.
+Your Zobox service will start automatically with Zo.
 
 ## API Overview
 
@@ -259,12 +259,12 @@ x-api-key: YOUR_READ_KEY
 authorization: Bearer YOUR_KEY
 ```
 
-Configure in `zorter.config.toml`:
+Configure in `zobox.config.toml`:
 
 ```toml
 [auth]
-admin_api_key_env_var = "ZORTER_ADMIN_API_KEY"
-read_api_key_env_var  = "ZORTER_READ_API_KEY"
+admin_api_key_env_var = "ZOBOX_ADMIN_API_KEY"
+read_api_key_env_var  = "ZOBOX_READ_API_KEY"
 required = true
 ```
 
@@ -307,7 +307,7 @@ See **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** for complete guide.
 
 ### Types and Workflows
 
-Define types in `zorter.config.toml`:
+Define types in `zobox.config.toml`:
 
 ```toml
 [types.update]
@@ -354,7 +354,7 @@ Define routing in `routes.json`:
     },
     "publish_to_worker": {
       "kind": "http",
-      "url": "http://localhost:9000/zorter/items",
+      "url": "http://localhost:9000/zobox/items",
       "method": "POST",
       "enabled": true
     }
@@ -376,7 +376,7 @@ Given `base_dir = "/home/workspace/Inbox"`:
 
 ```
 /home/workspace/Inbox/
-  zorter.config.toml
+  zobox.config.toml
   routes.json
   inbox/
     YYYY-MM-DD/
@@ -387,7 +387,7 @@ Given `base_dir = "/home/workspace/Inbox"`:
         <item-id>/
           <filename>        # Attachments
   db/
-    zorter.db              # SQLite index
+    zobox.db              # SQLite index
     migrations/
       001_init.sql
   logs/                    # Reserved for future use

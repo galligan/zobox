@@ -38,8 +38,8 @@ describe("checkHealth", () => {
         file_dir TEXT,
         attachments_count INTEGER NOT NULL DEFAULT 0,
         has_attachments INTEGER NOT NULL DEFAULT 0,
-        claimed_by TEXT,
-        claimed_at TEXT,
+        subscribed_by TEXT,
+        subscribed_at TEXT,
         summary TEXT
       );
     `);

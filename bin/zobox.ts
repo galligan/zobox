@@ -5,22 +5,22 @@ import { initStorage } from "../src/storage.js";
 
 function printHelp() {
   console.log(`
-zorter - Zo-native inbox + sorter + router
+zobox - Zo-native inbox + sorter + router
 
 Usage:
-  zorter start [--base-dir PATH] [--port PORT]
-  zorter migrate [--base-dir PATH]
-  zorter help
+  zobox start [--base-dir PATH] [--port PORT]
+  zobox migrate [--base-dir PATH]
+  zobox help
 
 Environment:
-  ZORTER_BASE_DIR   Base directory for inbox (default: /home/workspace/Inbox)
-  ZORTER_PORT       Port to listen on (default: 8787)
+  ZOBOX_BASE_DIR   Base directory for inbox (default: /home/workspace/Inbox)
+  ZOBOX_PORT       Port to listen on (default: 8787)
 
 For Zo, configure a User Service with:
-  Label: zorter
+  Label: zobox
   Type: http
   Local port: 8787
-  Entrypoint: bunx zorter start
+  Entrypoint: bunx zobox start
   Workdir: /home/workspace/Inbox
 `);
 }
@@ -33,8 +33,8 @@ type CliArgs = {
 
 function parseArgs(argv: string[]): CliArgs {
   const result: CliArgs = {
-    baseDir: process.env.ZORTER_BASE_DIR || "/home/workspace/Inbox",
-    port: Number.parseInt(process.env.ZORTER_PORT ?? "8787", 10),
+    baseDir: process.env.ZOBOX_BASE_DIR || "/home/workspace/Inbox",
+    port: Number.parseInt(process.env.ZOBOX_PORT ?? "8787", 10),
     showHelp: false,
   };
 
@@ -77,7 +77,7 @@ async function main() {
     case "migrate": {
       const config = loadConfig(baseDir);
       initStorage(config); // runs migrations as a side-effect
-      console.log("[zorter] migrations applied");
+      console.log("[zobox] migrations applied");
       break;
     }
     default:
@@ -86,6 +86,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("[zorter] fatal error", err);
+  console.error("[zobox] fatal error", err);
   process.exit(1);
 });

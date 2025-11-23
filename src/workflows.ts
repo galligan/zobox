@@ -2,16 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { StorageError } from "./errors.js";
 import { logger } from "./logger.js";
-import { routeItem } from "./routing/profiles";
+import { routeItem } from "./routing/destinations";
 import type { Storage } from "./storage";
 import type {
   AttachmentContext,
   AttachmentEnvelope,
   AttachmentInput,
-  ItemEnvelope,
-  RoutesConfig,
-  WorkflowDefinition,
-  ZorterConfig,
+  MessageEnvelope,
+  DestinationsConfig,
+  SorterDefinition,
+  ZoboxConfig,
 } from "./types";
 import {
   createAttachmentEnvelope,
@@ -23,14 +23,14 @@ import {
 } from "./workflows/attachments";
 
 /**
- * A workflow binding pairs a workflow name with its definition.
- * Used to apply workflow-specific file handling and side effects.
+ * A sorter binding pairs a sorter name with its definition.
+ * Used to apply sorter-specific file handling and side effects.
  */
-export type WorkflowBinding = {
-  /** Workflow identifier from config */
+export type SorterBinding = {
+  /** Sorter identifier from config */
   name: string;
-  /** Workflow configuration */
-  definition: WorkflowDefinition;
+  /** Sorter configuration */
+  definition: SorterDefinition;
 };
 
 /**
@@ -48,15 +48,15 @@ export type ProcessAttachmentsResult = {
  */
 export type ProcessAttachmentsOptions = {
   /** Zorter configuration */
-  config: ZorterConfig;
+  config: ZoboxConfig;
   /** Storage context */
   storage: Storage;
   /** Attachment context (item metadata for path generation) */
   ctx: AttachmentContext;
   /** Array of attachment inputs (base64 or binary) */
   inputs: AttachmentInput[];
-  /** Optional workflow binding for custom file path templates */
-  workflowBinding?: WorkflowBinding | null;
+  /** Optional sorter binding for custom file path templates */
+  sorterBinding?: SorterBinding | null;
 };
 
 /**
@@ -78,7 +78,7 @@ export type ProcessAttachmentsOptions = {
  * ```
  */
 export function resolveChannel(
-  config: ZorterConfig,
+  config: ZoboxConfig,
   itemType: string,
   explicitChannel?: string | null
 ): string {
@@ -89,31 +89,31 @@ export function resolveChannel(
   if (typeDef?.channel) {
     return String(typeDef.channel);
   }
-  return config.zorter.default_channel;
+  return config.zobox.default_channel;
 }
 
 /**
- * Find the workflow binding for a specific item type.
- * Searches all configured workflows for one matching the given type.
+ * Find the sorter binding for a specific item type.
+ * Searches all configured sorters for one matching the given type.
  *
  * @param config - Zorter configuration
- * @param type - Item type to find workflow for
- * @returns Workflow binding if found, null otherwise
+ * @param type - Item type to find sorter for
+ * @returns Sorter binding if found, null otherwise
  *
  * @example
  * ```typescript
- * const workflow = getWorkflowForType(config, 'email');
- * if (workflow) {
- *   console.log(`Using workflow: ${workflow.name}`);
- *   console.log(`Append to: ${workflow.definition.append_to_file}`);
+ * const sorter = getSorterForType(config, 'email');
+ * if (sorter) {
+ *   console.log(`Using sorter: ${sorter.name}`);
+ *   console.log(`Append to: ${sorter.definition.append_to_file}`);
  * }
  * ```
  */
-export function getWorkflowForType(
-  config: ZorterConfig,
+export function getSorterForType(
+  config: ZoboxConfig,
   type: string
-): WorkflowBinding | null {
-  for (const [name, wf] of Object.entries(config.workflows)) {
+): SorterBinding | null {
+  for (const [name, wf] of Object.entries(config.sorters)) {
     if (wf && typeof wf.type === "string" && wf.type === type) {
       return { name, definition: wf };
     }
@@ -123,7 +123,7 @@ export function getWorkflowForType(
 
 /**
  * Process attachments for an item, writing them to disk and creating envelopes.
- * Applies filename strategies, path templates, and workflow-specific configuration.
+ * Applies filename strategies, path templates, and sorter-specific configuration.
  *
  * @param options - Options for processing attachments
  * @returns Processed attachments with file paths and metadata
@@ -149,7 +149,7 @@ export function getWorkflowForType(
  *   storage,
  *   ctx,
  *   inputs,
- *   workflowBinding: workflow
+ *   sorterBinding: sorter
  * });
  * // result.attachments[0].path: /home/workspace/Inbox/files/Inbox/2025-11-22/{id}/photo.jpg
  * ```
@@ -157,7 +157,7 @@ export function getWorkflowForType(
 export function processAttachments(
   options: ProcessAttachmentsOptions
 ): ProcessAttachmentsResult {
-  const { config, storage, ctx, inputs, workflowBinding } = options;
+  const { config, storage, ctx, inputs, sorterBinding } = options;
 
   if (!(inputs.length && config.files.enabled)) {
     return { attachments: [], attachmentsDir: null };
@@ -165,8 +165,7 @@ export function processAttachments(
 
   const baseFilesDir = config.files.base_files_dir || storage.filesDir;
   const template =
-    workflowBinding?.definition.files_path_template ??
-    config.files.path_template;
+    sorterBinding?.definition.files_path_template ?? config.files.path_template;
   const keepBase64 = !!config.files.keep_base64_in_envelope;
 
   const attachments: AttachmentEnvelope[] = [];
@@ -231,7 +230,7 @@ export function processAttachments(
  * Build a text entry for appending to workflow files.
  * Format: - [timestamp] (type) preview (id: uuid)
  */
-function buildAppendEntry(envelope: ItemEnvelope): string {
+function buildAppendEntry(envelope: MessageEnvelope): string {
   const createdAt = envelope.createdAt;
   const preview = buildPayloadPreview(envelope.payload);
   return `- [${createdAt}] (${envelope.type}) ${preview} (id: ${envelope.id})\n`;
@@ -278,7 +277,11 @@ function buildPayloadPreview(payload: unknown): string {
  * Append item entry to a file (workflow side effect).
  * Creates parent directories if needed.
  */
-function appendToFile(target: string, envelope: ItemEnvelope, baseDir: string) {
+function appendToFile(
+  target: string,
+  envelope: MessageEnvelope,
+  baseDir: string
+) {
   const filePath = path.isAbsolute(target)
     ? target
     : path.join(baseDir, target);
@@ -291,32 +294,32 @@ function appendToFile(target: string, envelope: ItemEnvelope, baseDir: string) {
 }
 
 /**
- * Apply workflow side effects after item storage.
- * Handles file appending and HTTP routing based on workflow configuration.
+ * Apply sorter side effects after item storage.
+ * Handles file appending and HTTP routing based on sorter configuration.
  *
- * @param workflowBinding - Workflow binding to apply (null for no workflow)
+ * @param sorterBinding - Sorter binding to apply (null for no sorter)
  * @param envelope - Item envelope that was stored
  * @param storage - Storage context
  * @param routesConfig - Optional routes configuration for HTTP routing
  *
  * @example
  * ```typescript
- * const workflow = getWorkflowForType(config, 'note');
- * await applyWorkflowSideEffects(workflow, envelope, storage, routes);
- * // May append to workflow file and/or POST to HTTP endpoint
+ * const sorter = getSorterForType(config, 'note');
+ * await applySorterSideEffects(sorter, envelope, storage, routes);
+ * // May append to sorter file and/or POST to HTTP endpoint
  * ```
  */
-export async function applyWorkflowSideEffects(
-  workflowBinding: WorkflowBinding | null,
-  envelope: ItemEnvelope,
+export async function applySorterSideEffects(
+  sorterBinding: SorterBinding | null,
+  envelope: MessageEnvelope,
   storage: Storage,
-  routesConfig?: RoutesConfig
+  routesConfig?: DestinationsConfig
 ): Promise<void> {
-  if (!workflowBinding) {
+  if (!sorterBinding) {
     return;
   }
 
-  const wf = workflowBinding.definition;
+  const wf = sorterBinding.definition;
 
   if (wf.append_to_file) {
     try {
@@ -330,7 +333,7 @@ export async function applyWorkflowSideEffects(
     }
   }
 
-  if (wf.route_profile) {
-    await routeItem(wf.route_profile, envelope, routesConfig);
+  if (wf.destination) {
+    await routeItem(wf.destination, envelope, routesConfig);
   }
 }

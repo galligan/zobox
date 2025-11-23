@@ -1,12 +1,12 @@
 
-[zorter]
+[zobox]
 base_dir = "/home/workspace/Inbox"
-db_path = "/home/workspace/Inbox/db/zorter.db"
+db_path = "/home/workspace/Inbox/db/zobox.db"
 default_channel = "Inbox"
 
 [auth]
-admin_api_key_env_var = "ZORTER_ADMIN_API_KEY" # full read/write
-read_api_key_env_var  = "ZORTER_READ_API_KEY"  # optional read-only
+admin_api_key_env_var = "ZOBOX_ADMIN_API_KEY" # full read/write
+read_api_key_env_var  = "ZOBOX_READ_API_KEY"  # optional read-only
 required = true
 
 [files]
@@ -38,14 +38,14 @@ payload_example = """
 }
 """
 
-[workflows.updates]
+[sorters.updates]
 type = "update"
 description = "Append updates to a rolling log."
 files_path_template = "{baseFilesDir}/Updates/{date}/{eventId}/{filename}"
 append_to_file = "/home/workspace/Inbox/updates.md"
 route_profile = "store_only"
 
-[workflows.posts]
+[sorters.posts]
 type = "post"
 description = "Publish posts to content folder."
 files_path_template = "{baseFilesDir}/Posts/{date}/{eventId}/{filename}"

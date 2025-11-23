@@ -53,9 +53,9 @@ export function getValidatedMultipart<T>(c: Context): T {
  * @example
  * ```typescript
  * app.post('/items',
- *   validateJson(NewItemInputSchema),
+ *   validateJson(NewMessageInputSchema),
  *   async (c) => {
- *     const data = getValidatedBody<NewItemInput>(c);
+ *     const data = getValidatedBody<NewMessageInput>(c);
  *     // data is fully typed and validated
  *   }
  * );
