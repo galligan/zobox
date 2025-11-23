@@ -1,0 +1,400 @@
+---
+name: Zorter - Add Route
+description: Guide agent to create or update HTTP routing profiles for item workflows
+version: 1.0.0
+---
+
+# Zorter: Add Route
+
+You are helping create or update a **route profile** in Zorter's `routes.json` configuration.
+
+Route profiles define external HTTP endpoints where Zorter can send item envelopes. Workflows reference these profiles via the `route_profile` field to enable outbound routing.
+
+## Inputs
+
+Collect the following from the user:
+
+- **Profile name** (required): Descriptive identifier (e.g., `publish_to_worker`, `notify_slack`)
+- **Endpoint URL** (required): HTTP(S) URL to POST item envelopes to
+- **HTTP method** (optional): Defaults to `POST`
+- **Headers** (optional): Custom HTTP headers to send
+- **Enabled** (optional): Whether this route is active (defaults to `true`)
+- **Timeout** (optional): Request timeout in milliseconds (defaults to 5000ms)
+
+## Procedure
+
+### 1. Gather requirements
+
+Ask the user for route details if not already provided:
+
+```
+Creating a route profile. Please provide:
+
+- Profile name: (e.g., "publish_to_worker", "send_to_webhook")
+- Endpoint URL: (where to send items)
+- HTTP method: (POST, PUT, PATCH - defaults to POST)
+- Custom headers: (optional, e.g., {"Authorization": "Bearer xyz"})
+- Enabled: (true/false, defaults to true)
+- Timeout: (milliseconds, defaults to 5000)
+```
+
+Summarize what you'll create before proceeding.
+
+### 2. Test connectivity (recommended)
+
+Before creating the route, test the endpoint if possible:
+
+```bash
+curl -X POST "<endpoint_url>" \
+  -H "content-type: application/json" \
+  -H "<any custom headers>" \
+  -d '{"test": "connection"}' \
+  -w "\nHTTP Status: %{http_code}\n"
+```
+
+Report:
+- Whether endpoint is reachable
+- HTTP status code received
+- Any authentication or CORS issues
+- Estimated response time
+
+If test fails, warn the user but proceed if they confirm.
+
+### 3. Load or create routes.json
+
+- Check if `/home/workspace/Inbox/routes.json` exists
+- If it exists, read it
+- If not, create it from `config/routes.example.json` template:
+
+```json
+{
+  "profiles": {
+    "store_only": {
+      "kind": "noop",
+      "description": "Do nothing, keep item in local inbox."
+    }
+  }
+}
+```
+
+### 4. Generate route profile
+
+Create a new profile entry. Example:
+
+```json
+{
+  "profiles": {
+    "store_only": {
+      "kind": "noop",
+      "description": "Do nothing, keep item in local inbox."
+    },
+    "publish_to_worker": {
+      "kind": "http",
+      "description": "POST item envelope to worker service.",
+      "url": "http://localhost:9000/zorter/items",
+      "method": "POST",
+      "headers": {
+        "content-type": "application/json",
+        "x-api-key": "worker-secret-key"
+      },
+      "enabled": true,
+      "timeoutMs": 5000
+    }
+  }
+}
+```
+
+**Field descriptions:**
+
+- `kind`: Must be `"http"` for active routes or `"noop"` for no-op routes
+- `description`: Human-readable explanation of what this route does
+- `url`: Full HTTP(S) endpoint URL
+- `method`: HTTP verb (POST, PUT, PATCH)
+- `headers`: Key-value pairs of HTTP headers
+- `enabled`: Set to `false` to temporarily disable route without deleting it
+- `timeoutMs`: Request timeout in milliseconds
+
+### 5. Route profile types
+
+**HTTP route (active):**
+```json
+{
+  "kind": "http",
+  "description": "Send to external service",
+  "url": "https://api.example.com/webhook",
+  "method": "POST",
+  "headers": {
+    "authorization": "Bearer secret-token"
+  },
+  "enabled": true,
+  "timeoutMs": 10000
+}
+```
+
+**No-op route (local only):**
+```json
+{
+  "kind": "noop",
+  "description": "Store locally without routing"
+}
+```
+
+**Disabled route (temporarily off):**
+```json
+{
+  "kind": "http",
+  "description": "Worker endpoint (currently disabled)",
+  "url": "http://localhost:9000/items",
+  "enabled": false,
+  "timeoutMs": 5000
+}
+```
+
+### 6. Update routes.json
+
+Add or update the profile:
+
+- Maintain valid JSON syntax
+- Preserve existing profiles
+- Keep `store_only` as default profile
+- Use consistent indentation (2 spaces)
+- Alphabetize profiles if possible
+
+### 7. Link to workflow
+
+Remind user to reference this profile in a workflow:
+
+```toml
+[workflows.my_workflow]
+type = "my_type"
+description = "..."
+route_profile = "<profile_name>"
+```
+
+If workflow already exists, offer to update it.
+
+### 8. Validate
+
+After editing routes.json, verify:
+
+- [ ] JSON syntax is valid (parse the file to confirm)
+- [ ] Profile name is unique
+- [ ] `kind` is either `"http"` or `"noop"`
+- [ ] `url` is present for HTTP routes
+- [ ] `url` is a valid HTTP(S) URL
+- [ ] `method` is valid (POST, PUT, PATCH, GET)
+- [ ] `headers` is an object (if present)
+- [ ] `enabled` is boolean (if present)
+- [ ] `timeoutMs` is a positive number (if present)
+- [ ] Description is clear and helpful
+
+### 9. Summary
+
+Report back:
+
+```
+Created route profile: <profileName>
+
+Configuration:
+- Type: <http/noop>
+- Endpoint: <url>
+- Method: <method>
+- Headers: <count> custom headers
+- Enabled: <true/false>
+- Timeout: <timeoutMs>ms
+
+Connectivity test: <passed/failed/skipped>
+
+Next steps:
+1. Ensure endpoint is reachable from Zorter server
+2. Reference this profile in a workflow: route_profile = "<profileName>"
+3. Restart Zorter service to load new routes.json
+4. Test by sending an item that uses this workflow
+5. Check Zorter logs for routing success/failure
+6. Monitor endpoint logs to verify items are arriving
+```
+
+## Common route patterns
+
+**Webhook notification:**
+```json
+{
+  "kind": "http",
+  "description": "Notify Slack channel",
+  "url": "https://hooks.slack.com/services/T00/B00/XXX",
+  "method": "POST",
+  "headers": {
+    "content-type": "application/json"
+  },
+  "enabled": true,
+  "timeoutMs": 3000
+}
+```
+
+**Worker service:**
+```json
+{
+  "kind": "http",
+  "description": "Send to background worker for processing",
+  "url": "http://worker.internal:8080/jobs",
+  "method": "POST",
+  "headers": {
+    "x-api-key": "worker-secret",
+    "content-type": "application/json"
+  },
+  "enabled": true,
+  "timeoutMs": 10000
+}
+```
+
+**External API:**
+```json
+{
+  "kind": "http",
+  "description": "Forward to external API",
+  "url": "https://api.external.com/v1/events",
+  "method": "POST",
+  "headers": {
+    "authorization": "Bearer long-lived-token",
+    "content-type": "application/json",
+    "x-source": "zorter"
+  },
+  "enabled": true,
+  "timeoutMs": 15000
+}
+```
+
+**Local development endpoint:**
+```json
+{
+  "kind": "http",
+  "description": "Local dev server",
+  "url": "http://localhost:3000/api/zorter",
+  "method": "POST",
+  "enabled": true,
+  "timeoutMs": 5000
+}
+```
+
+## Security considerations
+
+When creating routes, remind users:
+
+1. **API keys in headers**: Store sensitive tokens in environment variables, not directly in routes.json
+2. **HTTPS in production**: Use `https://` URLs for production endpoints
+3. **Network access**: Ensure Zorter server can reach the endpoint (firewall, VPN, etc.)
+4. **Endpoint validation**: Target endpoint should validate incoming requests
+5. **Rate limiting**: Consider rate limits on both sides
+6. **Timeout values**: Set appropriate timeouts to avoid blocking Zorter
+
+**Better approach for secrets:**
+
+Instead of:
+```json
+{
+  "headers": {
+    "authorization": "Bearer secret-key-here"
+  }
+}
+```
+
+Recommend:
+```json
+{
+  "headers": {
+    "authorization": "Bearer ${WORKER_API_KEY}"
+  }
+}
+```
+
+(Note: Current Zorter version doesn't support env var expansion in routes.json, but this is a good practice to document for future versions)
+
+## Troubleshooting
+
+**Problem: Route not working**
+- Check Zorter logs for HTTP errors
+- Verify endpoint is reachable: `curl -v <url>`
+- Confirm `enabled: true` in profile
+- Check workflow references correct `route_profile` name
+- Verify network/firewall rules
+
+**Problem: Timeout errors**
+- Increase `timeoutMs` value
+- Check endpoint response time
+- Verify endpoint isn't blocking or hanging
+- Consider async processing on endpoint side
+
+**Problem: Authentication failures**
+- Verify headers are correct
+- Test with curl to confirm auth works
+- Check for typos in API keys
+- Ensure tokens haven't expired
+
+**Problem: Items not routing**
+- Verify workflow has `route_profile` field set
+- Check route name matches profile name exactly
+- Confirm `kind: "http"` (not `"noop"`)
+- Restart Zorter after routes.json changes
+
+## Example interaction
+
+**User**: "Add a route to send items to my worker at http://localhost:9000/jobs with an API key"
+
+**Agent**:
+```
+I'll create a route profile for your worker endpoint.
+
+Details:
+- Profile name: send_to_worker
+- URL: http://localhost:9000/jobs
+- Method: POST
+- Headers: x-api-key
+- Timeout: 5000ms
+
+Testing connectivity...
+[runs curl test]
+✓ Endpoint reachable (HTTP 200, 45ms)
+
+Proceeding to update routes.json...
+```
+
+Add to `routes.json`:
+
+```json
+{
+  "profiles": {
+    "store_only": {
+      "kind": "noop",
+      "description": "Do nothing, keep item in local inbox."
+    },
+    "send_to_worker": {
+      "kind": "http",
+      "description": "Send to background worker for processing",
+      "url": "http://localhost:9000/jobs",
+      "method": "POST",
+      "headers": {
+        "content-type": "application/json",
+        "x-api-key": "your-worker-api-key"
+      },
+      "enabled": true,
+      "timeoutMs": 5000
+    }
+  }
+}
+```
+
+## Validation checklist
+
+Before finishing, confirm:
+
+- [ ] JSON syntax is valid
+- [ ] Profile name is descriptive
+- [ ] URL is reachable (tested with curl)
+- [ ] Method is appropriate (usually POST)
+- [ ] Headers are correct
+- [ ] Timeout is reasonable (not too short/long)
+- [ ] Profile is enabled (unless intentionally disabled)
+- [ ] Workflow can reference this profile
+- [ ] No sensitive data directly in routes.json
+
+Use concise, technical language. Focus on making routes reliable and maintainable.
