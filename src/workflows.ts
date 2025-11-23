@@ -1,32 +1,86 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import crypto from 'node:crypto';
+import fs from "node:fs";
+import path from "node:path";
+import { StorageError } from "./errors.js";
+import { logger } from "./logger.js";
+import { routeItem } from "./routing/profiles";
+import type { Storage } from "./storage";
 import type {
-  ZorterConfig,
-  WorkflowDefinition,
-  AttachmentInput,
   AttachmentContext,
   AttachmentEnvelope,
-  RoutesConfig,
+  AttachmentInput,
   ItemEnvelope,
-  FilenameStrategy,
-} from './types';
-import type { Storage } from './storage';
+  RoutesConfig,
+  WorkflowDefinition,
+  ZorterConfig,
+} from "./types";
+import {
+  createAttachmentEnvelope,
+  inputToBuffer,
+  renderAttachmentPath,
+  resolveAttachmentFilename,
+  sanitizeChannel,
+  sanitizeTimestamp,
+} from "./workflows/attachments";
 
-export interface WorkflowBinding {
+/**
+ * A workflow binding pairs a workflow name with its definition.
+ * Used to apply workflow-specific file handling and side effects.
+ */
+export type WorkflowBinding = {
+  /** Workflow identifier from config */
   name: string;
+  /** Workflow configuration */
   definition: WorkflowDefinition;
-}
+};
 
-export interface ProcessAttachmentsResult {
+/**
+ * Result of processing attachments for an item.
+ */
+export type ProcessAttachmentsResult = {
+  /** Array of attachment envelopes with file paths and metadata */
   attachments: AttachmentEnvelope[];
+  /** Directory where attachments were stored, or null if no attachments */
   attachmentsDir: string | null;
-}
+};
 
+/**
+ * Options for processing attachments.
+ */
+export type ProcessAttachmentsOptions = {
+  /** Zorter configuration */
+  config: ZorterConfig;
+  /** Storage context */
+  storage: Storage;
+  /** Attachment context (item metadata for path generation) */
+  ctx: AttachmentContext;
+  /** Array of attachment inputs (base64 or binary) */
+  inputs: AttachmentInput[];
+  /** Optional workflow binding for custom file path templates */
+  workflowBinding?: WorkflowBinding | null;
+};
+
+/**
+ * Resolve the channel for an item based on explicit channel, type definition, or default.
+ * Priority: explicit channel > type.channel > default_channel.
+ *
+ * @param config - Zorter configuration
+ * @param itemType - Type of the item
+ * @param explicitChannel - Optional explicit channel from item payload
+ * @returns Resolved channel name
+ *
+ * @example
+ * ```typescript
+ * const channel = resolveChannel(config, 'note', 'Work');
+ * // Returns 'Work'
+ *
+ * const channel2 = resolveChannel(config, 'note', null);
+ * // Returns type definition channel or 'Inbox' default
+ * ```
+ */
 export function resolveChannel(
   config: ZorterConfig,
   itemType: string,
-  explicitChannel?: string | null,
+  explicitChannel?: string | null
 ): string {
   if (explicitChannel && explicitChannel.trim().length > 0) {
     return explicitChannel.trim();
@@ -38,31 +92,78 @@ export function resolveChannel(
   return config.zorter.default_channel;
 }
 
+/**
+ * Find the workflow binding for a specific item type.
+ * Searches all configured workflows for one matching the given type.
+ *
+ * @param config - Zorter configuration
+ * @param type - Item type to find workflow for
+ * @returns Workflow binding if found, null otherwise
+ *
+ * @example
+ * ```typescript
+ * const workflow = getWorkflowForType(config, 'email');
+ * if (workflow) {
+ *   console.log(`Using workflow: ${workflow.name}`);
+ *   console.log(`Append to: ${workflow.definition.append_to_file}`);
+ * }
+ * ```
+ */
 export function getWorkflowForType(
   config: ZorterConfig,
-  type: string,
+  type: string
 ): WorkflowBinding | null {
   for (const [name, wf] of Object.entries(config.workflows)) {
-    if (wf && typeof wf.type === 'string' && wf.type === type) {
+    if (wf && typeof wf.type === "string" && wf.type === type) {
       return { name, definition: wf };
     }
   }
   return null;
 }
 
+/**
+ * Process attachments for an item, writing them to disk and creating envelopes.
+ * Applies filename strategies, path templates, and workflow-specific configuration.
+ *
+ * @param options - Options for processing attachments
+ * @returns Processed attachments with file paths and metadata
+ *
+ * @example
+ * ```typescript
+ * const inputs: AttachmentInput[] = [{
+ *   filename: 'photo.jpg',
+ *   mimeType: 'image/jpeg',
+ *   base64: '...'
+ * }];
+ *
+ * const ctx: AttachmentContext = {
+ *   id: envelope.id,
+ *   type: envelope.type,
+ *   channel: envelope.channel,
+ *   createdAt: envelope.createdAt,
+ *   date: '2025-11-22'
+ * };
+ *
+ * const result = processAttachments({
+ *   config,
+ *   storage,
+ *   ctx,
+ *   inputs,
+ *   workflowBinding: workflow
+ * });
+ * // result.attachments[0].path: /home/workspace/Inbox/files/Inbox/2025-11-22/{id}/photo.jpg
+ * ```
+ */
 export function processAttachments(
-  config: ZorterConfig,
-  storage: Storage,
-  ctx: AttachmentContext,
-  inputs: AttachmentInput[],
-  workflowBinding?: WorkflowBinding | null,
+  options: ProcessAttachmentsOptions
 ): ProcessAttachmentsResult {
-  if (!inputs.length || !config.files.enabled) {
+  const { config, storage, ctx, inputs, workflowBinding } = options;
+
+  if (!(inputs.length && config.files.enabled)) {
     return { attachments: [], attachmentsDir: null };
   }
 
-  const baseFilesDir =
-    config.files.base_files_dir || storage.filesDir;
+  const baseFilesDir = config.files.base_files_dir || storage.filesDir;
   const template =
     workflowBinding?.definition.files_path_template ??
     config.files.path_template;
@@ -75,16 +176,16 @@ export function processAttachments(
   const safeChannel = sanitizeChannel(ctx.channel);
 
   for (let i = 0; i < inputs.length; i += 1) {
-    const input = inputs[i] as any;
-    const isBase64 = typeof input.base64 === 'string';
-    const originalFilename = input.filename as string;
-    const finalFilename = applyFilenameStrategy(
+    const input = inputs[i];
+    const originalFilename = input.filename;
+
+    const finalFilename = resolveAttachmentFilename(
       originalFilename,
       config.files.filename_strategy,
-      ctx,
+      ctx
     );
 
-    const rendered = renderPathTemplate(template, {
+    const rendered = renderAttachmentPath(template, {
       baseFilesDir,
       channel: safeChannel,
       date: ctx.date,
@@ -102,9 +203,7 @@ export function processAttachments(
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    const buffer: Buffer = isBase64
-      ? Buffer.from(input.base64, 'base64')
-      : input.buffer;
+    const buffer = inputToBuffer(input);
 
     fs.writeFileSync(targetPath, buffer);
 
@@ -112,19 +211,15 @@ export function processAttachments(
       attachmentsDir = dir;
     }
 
-    const attachment: AttachmentEnvelope = {
-      id: `${ctx.id}_${i}`,
-      filename: finalFilename,
-      originalFilename,
-      mimeType: input.mimeType,
-      size: buffer.length,
-      path: targetPath,
-      source: isBase64 ? 'base64' : 'multipart',
-    };
-
-    if (keepBase64 && isBase64) {
-      attachment.base64 = input.base64;
-    }
+    const attachment = createAttachmentEnvelope({
+      input,
+      index: i,
+      eventId: ctx.id,
+      finalFilename,
+      targetPath,
+      buffer,
+      keepBase64,
+    });
 
     attachments.push(attachment);
   }
@@ -132,109 +227,58 @@ export function processAttachments(
   return { attachments, attachmentsDir };
 }
 
-function sanitizeChannel(channel: string): string {
-  return channel.replace(/[^A-Za-z0-9._-]+/g, '_');
-}
-
-function sanitizeTimestamp(iso: string): string {
-  // Keep numbers and T; drop punctuation and timezone fluff
-  return iso.replace(/[^0-9T]/g, '').slice(0, 15);
-}
-
-function applyFilenameStrategy(
-  original: string,
-  strategy: FilenameStrategy,
-  ctx: AttachmentContext,
-): string {
-  if (strategy === 'original') return original;
-
-  const lastDot = original.lastIndexOf('.');
-  const name = lastDot > -1 ? original.slice(0, lastDot) : original;
-  const ext = lastDot > -1 ? original.slice(lastDot) : '';
-
-  let prefix = '';
-  switch (strategy) {
-    case 'timestampPrefix':
-      prefix = `${sanitizeTimestamp(ctx.createdAt)}_`;
-      break;
-    case 'eventIdPrefix':
-      prefix = `${ctx.id}_`;
-      break;
-    case 'uuid':
-      prefix = `${crypto.randomUUID()}_`;
-      break;
-    default:
-      prefix = '';
-  }
-
-  return `${prefix}${name}${ext}`;
-}
-
-function renderPathTemplate(
-  template: string,
-  ctx: {
-    baseFilesDir: string;
-    channel: string;
-    date: string;
-    eventId: string;
-    timestamp: string;
-    filename: string;
-  },
-): string {
-  let result = template;
-  const map: Record<string, string> = {
-    baseFilesDir: ctx.baseFilesDir,
-    channel: ctx.channel,
-    date: ctx.date,
-    eventId: ctx.eventId,
-    timestamp: ctx.timestamp,
-    filename: ctx.filename,
-  };
-
-  for (const [key, value] of Object.entries(map)) {
-    const re = new RegExp(`\\{${key}\\}`, 'g');
-    result = result.replace(re, value);
-  }
-
-  return result;
-}
-
+/**
+ * Build a text entry for appending to workflow files.
+ * Format: - [timestamp] (type) preview (id: uuid)
+ */
 function buildAppendEntry(envelope: ItemEnvelope): string {
   const createdAt = envelope.createdAt;
   const preview = buildPayloadPreview(envelope.payload);
   return `- [${createdAt}] (${envelope.type}) ${preview} (id: ${envelope.id})\n`;
 }
 
+/**
+ * Type guard to check if value is a record with string keys.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Build a short preview of the payload for append entries.
+ * Extracts common fields (title, text, body) or truncates JSON.
+ */
 function buildPayloadPreview(payload: unknown): string {
-  if (payload == null) return '';
-  if (typeof payload === 'string') {
+  if (payload == null) {
+    return "";
+  }
+  if (typeof payload === "string") {
     return payload.slice(0, 120);
   }
-  if (typeof payload === 'object') {
-    const anyPayload = payload as any;
-    if (typeof anyPayload.title === 'string') {
-      return anyPayload.title;
+  if (isRecord(payload)) {
+    if (typeof payload.title === "string") {
+      return payload.title;
     }
-    if (typeof anyPayload.text === 'string') {
-      return anyPayload.text.slice(0, 120);
+    if (typeof payload.text === "string") {
+      return payload.text.slice(0, 120);
     }
-    if (typeof anyPayload.body === 'string') {
-      return anyPayload.body.slice(0, 120);
+    if (typeof payload.body === "string") {
+      return payload.body.slice(0, 120);
     }
     try {
-      return JSON.stringify(anyPayload).slice(0, 120);
+      return JSON.stringify(payload).slice(0, 120);
     } catch {
-      return '';
+      return "";
     }
   }
   return String(payload).slice(0, 120);
 }
 
-function appendToFile(
-  target: string,
-  envelope: ItemEnvelope,
-  baseDir: string,
-) {
+/**
+ * Append item entry to a file (workflow side effect).
+ * Creates parent directories if needed.
+ */
+function appendToFile(target: string, envelope: ItemEnvelope, baseDir: string) {
   const filePath = path.isAbsolute(target)
     ? target
     : path.join(baseDir, target);
@@ -243,70 +287,34 @@ function appendToFile(
     fs.mkdirSync(dir, { recursive: true });
   }
   const entry = buildAppendEntry(envelope);
-  fs.appendFileSync(filePath, entry, 'utf8');
+  fs.appendFileSync(filePath, entry, "utf8");
 }
 
-async function routeItem(
-  profileName: string,
-  envelope: ItemEnvelope,
-  routesConfig?: RoutesConfig,
-): Promise<void> {
-  if (!profileName || profileName === 'store_only') return;
-
-  if (!routesConfig) {
-    console.warn(
-      `[zorter] route profile "${profileName}" requested but no routes.json loaded`,
-    );
-    return;
-  }
-
-  const profile = routesConfig.profiles[profileName];
-  if (!profile) {
-    console.warn(
-      `[zorter] route profile "${profileName}" not found in routes.json`,
-    );
-    return;
-  }
-  if (profile.enabled === false) return;
-  if ((profile.kind && profile.kind !== 'http') || !profile.url) {
-    console.warn(
-      `[zorter] route profile "${profileName}" is not an HTTP profile or missing url`,
-    );
-    return;
-  }
-
-  const method = (profile.method || 'POST').toUpperCase();
-  const headers: Record<string, string> = {
-    'content-type': 'application/json',
-    ...(profile.headers ?? {}),
-  };
-
-  try {
-    const res = await fetch(profile.url, {
-      method,
-      headers,
-      body: JSON.stringify(envelope),
-    });
-    if (!res.ok) {
-      console.warn(
-        `[zorter] route "${profileName}" HTTP ${res.status} when sending to ${profile.url}`,
-      );
-    }
-  } catch (err) {
-    console.error(
-      `[zorter] route "${profileName}" failed:`,
-      err instanceof Error ? err.message : err,
-    );
-  }
-}
-
+/**
+ * Apply workflow side effects after item storage.
+ * Handles file appending and HTTP routing based on workflow configuration.
+ *
+ * @param workflowBinding - Workflow binding to apply (null for no workflow)
+ * @param envelope - Item envelope that was stored
+ * @param storage - Storage context
+ * @param routesConfig - Optional routes configuration for HTTP routing
+ *
+ * @example
+ * ```typescript
+ * const workflow = getWorkflowForType(config, 'note');
+ * await applyWorkflowSideEffects(workflow, envelope, storage, routes);
+ * // May append to workflow file and/or POST to HTTP endpoint
+ * ```
+ */
 export async function applyWorkflowSideEffects(
   workflowBinding: WorkflowBinding | null,
   envelope: ItemEnvelope,
   storage: Storage,
-  routesConfig?: RoutesConfig,
+  routesConfig?: RoutesConfig
 ): Promise<void> {
-  if (!workflowBinding) return;
+  if (!workflowBinding) {
+    return;
+  }
 
   const wf = workflowBinding.definition;
 
@@ -314,9 +322,10 @@ export async function applyWorkflowSideEffects(
     try {
       appendToFile(wf.append_to_file, envelope, storage.baseDir);
     } catch (err) {
-      console.error(
-        `[zorter] Failed to append to ${wf.append_to_file}:`,
-        err instanceof Error ? err.message : err,
+      logger.error(
+        "Failed to append to file",
+        err instanceof Error ? err : new StorageError(String(err)),
+        { filePath: wf.append_to_file, itemId: envelope.id }
       );
     }
   }
