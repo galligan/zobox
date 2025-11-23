@@ -1,0 +1,33 @@
+# Copy this file to .lefthook-local.yml to customize your local hooks
+# .lefthook-local.yml is in .gitignore and won't be committed
+#
+# Common customizations:
+
+# Skip expensive checks during fast iteration:
+# pre-commit:
+#   commands:
+#     types:
+#       skip: true  # Skip type checking on commit
+#     test-related:
+#       skip: true  # Skip tests on commit
+
+# Run only formatting and linting:
+# pre-commit:
+#   commands:
+#     types:
+#       skip: true
+#     test-related:
+#       skip: true
+
+# Disable all pre-push hooks for faster pushes:
+# pre-push:
+#   skip: true
+
+# Skip specific hooks only when merging/rebasing:
+# pre-commit:
+#   commands:
+#     test-related:
+#       skip:
+#         - merge
+#         - rebase
+#         - ref: main  # Skip when on main branch
