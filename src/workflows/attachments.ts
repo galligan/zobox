@@ -59,24 +59,39 @@ export function isBinaryAttachment(
 
 /**
  * Applies a filename strategy to an original filename.
+ * ALWAYS sanitizes the filename to prevent path traversal attacks.
  *
- * @param original - The original filename
+ * @param original - The original filename (will be sanitized)
  * @param strategy - Strategy to apply: original, timestampPrefix, eventIdPrefix, or uuid
  * @param ctx - Attachment context for generating prefixes
- * @returns The filename after applying the strategy
+ * @returns The filename after applying sanitization and strategy
+ *
+ * @example
+ * ```typescript
+ * // Path traversal attempt is neutralized
+ * resolveAttachmentFilename("../../etc/passwd", "original", ctx);
+ * // Returns "..etcpasswd"
+ *
+ * // Normal filename preserved
+ * resolveAttachmentFilename("photo.jpg", "timestampPrefix", ctx);
+ * // Returns "20251122T123456_photo.jpg"
+ * ```
  */
 export function resolveAttachmentFilename(
   original: string,
   strategy: FilenameStrategy,
   ctx: AttachmentContext
 ): string {
+  // SECURITY: Always sanitize filename to prevent path traversal
+  const sanitized = sanitizeFilename(original);
+
   if (strategy === "original") {
-    return original;
+    return sanitized;
   }
 
-  const lastDot = original.lastIndexOf(".");
-  const name = lastDot > -1 ? original.slice(0, lastDot) : original;
-  const ext = lastDot > -1 ? original.slice(lastDot) : "";
+  const lastDot = sanitized.lastIndexOf(".");
+  const name = lastDot > -1 ? sanitized.slice(0, lastDot) : sanitized;
+  const ext = lastDot > -1 ? sanitized.slice(lastDot) : "";
 
   let prefix = "";
   switch (strategy) {
@@ -201,6 +216,38 @@ export function createAttachmentEnvelope(
   }
 
   return envelope;
+}
+
+/**
+ * Sanitizes a filename to prevent path traversal attacks.
+ * Removes path separators and null bytes while preserving safe characters.
+ *
+ * @param filename - Raw filename from user input
+ * @returns Sanitized filename safe for filesystem operations
+ *
+ * @example
+ * ```typescript
+ * sanitizeFilename("../../etc/passwd"); // Returns "..etcpasswd"
+ * sanitizeFilename("file/with/slashes.txt"); // Returns "filewithslashes.txt"
+ * sanitizeFilename("normal-file.jpg"); // Returns "normal-file.jpg"
+ * ```
+ */
+export function sanitizeFilename(filename: string): string {
+  // Remove null bytes
+  let safe = filename.replace(/\0/g, "");
+
+  // Remove path separators (/ and \) to prevent directory traversal
+  safe = safe.replace(/[/\\]/g, "");
+
+  // Remove leading/trailing whitespace (but preserve dots for file extensions)
+  safe = safe.trim();
+
+  // If the filename is now empty, provide a fallback
+  if (safe.length === 0) {
+    return "unnamed";
+  }
+
+  return safe;
 }
 
 /**

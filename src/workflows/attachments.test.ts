@@ -11,13 +11,76 @@ import {
   renderAttachmentPath,
   resolveAttachmentFilename,
   sanitizeChannel,
+  sanitizeFilename,
   sanitizeTimestamp,
 } from "./attachments";
 
 // Test regex patterns (moved to top level for performance)
 const UUID_FILENAME_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_file\.txt$/;
+const UUID_PATH_TRAVERSAL_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_\.{6}etccron\.devil$/;
 const TIMESTAMP_ONLY_REGEX = /^[0-9T]+$/;
+
+describe("sanitizeFilename", () => {
+  test("preserves safe filenames", () => {
+    expect(sanitizeFilename("photo.jpg")).toBe("photo.jpg");
+    expect(sanitizeFilename("document.pdf")).toBe("document.pdf");
+    expect(sanitizeFilename("my-file_v2.txt")).toBe("my-file_v2.txt");
+  });
+
+  test("removes path separators (Unix)", () => {
+    expect(sanitizeFilename("../../etc/passwd")).toBe("....etcpasswd");
+    expect(sanitizeFilename("/etc/passwd")).toBe("etcpasswd");
+    expect(sanitizeFilename("dir/file.txt")).toBe("dirfile.txt");
+  });
+
+  test("removes path separators (Windows)", () => {
+    expect(sanitizeFilename("..\\..\\windows\\system32")).toBe(
+      "....windowssystem32"
+    );
+    expect(sanitizeFilename("C:\\windows\\file.txt")).toBe("C:windowsfile.txt");
+  });
+
+  test("removes null bytes", () => {
+    expect(sanitizeFilename("file\0.txt")).toBe("file.txt");
+    expect(sanitizeFilename("\0hidden.txt")).toBe("hidden.txt");
+  });
+
+  test("removes leading and trailing whitespace", () => {
+    expect(sanitizeFilename("  file.txt")).toBe("file.txt");
+    expect(sanitizeFilename("file.txt  ")).toBe("file.txt");
+    expect(sanitizeFilename("  file.txt  ")).toBe("file.txt");
+  });
+
+  test("preserves dots (not dangerous without path separators)", () => {
+    expect(sanitizeFilename("...file.txt")).toBe("...file.txt");
+    expect(sanitizeFilename(". . file.txt")).toBe(". . file.txt");
+    expect(sanitizeFilename("...")).toBe("...");
+    expect(sanitizeFilename(".")).toBe(".");
+  });
+
+  test("returns fallback for empty input", () => {
+    expect(sanitizeFilename("")).toBe("unnamed");
+    expect(sanitizeFilename("   ")).toBe("unnamed");
+  });
+
+  test("handles mixed path traversal attempts", () => {
+    expect(sanitizeFilename("../../../etc/cron.d/pwn")).toBe(
+      "......etccron.dpwn"
+    );
+    expect(sanitizeFilename("./config/../../../passwd")).toBe(
+      ".config......passwd"
+    );
+  });
+
+  test("preserves internal dots (extensions)", () => {
+    expect(sanitizeFilename("archive.tar.gz")).toBe("archive.tar.gz");
+    expect(sanitizeFilename("my.file.with.dots.txt")).toBe(
+      "my.file.with.dots.txt"
+    );
+  });
+});
 
 describe("resolveAttachmentFilename", () => {
   const ctx: AttachmentContext = {
@@ -28,9 +91,20 @@ describe("resolveAttachmentFilename", () => {
     date: "2025-11-22",
   };
 
-  test("original strategy returns unchanged filename", () => {
+  test("original strategy returns sanitized filename", () => {
     const result = resolveAttachmentFilename("photo.jpg", "original", ctx);
     expect(result).toBe("photo.jpg");
+  });
+
+  test("sanitizes path traversal in original strategy", () => {
+    const result = resolveAttachmentFilename(
+      "../../etc/passwd",
+      "original",
+      ctx
+    );
+    expect(result).toBe("....etcpasswd");
+    expect(result).not.toContain("/");
+    expect(result).not.toContain("\\");
   });
 
   test("timestampPrefix adds sanitized timestamp", () => {
@@ -42,15 +116,46 @@ describe("resolveAttachmentFilename", () => {
     expect(result).toBe("20251122T123456_document.pdf");
   });
 
+  test("sanitizes path traversal with timestampPrefix", () => {
+    const result = resolveAttachmentFilename(
+      "../../../pwn.sh",
+      "timestampPrefix",
+      ctx
+    );
+    expect(result).toBe("20251122T123456_......pwn.sh");
+    expect(result).not.toContain("/");
+  });
+
   test("eventIdPrefix adds event ID", () => {
     const result = resolveAttachmentFilename("image.png", "eventIdPrefix", ctx);
     expect(result).toBe("evt-123_image.png");
+  });
+
+  test("sanitizes path traversal with eventIdPrefix", () => {
+    const result = resolveAttachmentFilename(
+      "dir/../../file.txt",
+      "eventIdPrefix",
+      ctx
+    );
+    expect(result).toBe("evt-123_dir....file.txt");
+    expect(result).not.toContain("/");
   });
 
   test("uuid strategy adds random UUID prefix", () => {
     const result = resolveAttachmentFilename("file.txt", "uuid", ctx);
     // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     expect(result).toMatch(UUID_FILENAME_REGEX);
+  });
+
+  test("sanitizes path traversal with uuid strategy", () => {
+    const result = resolveAttachmentFilename(
+      "../../../etc/cron.d/evil",
+      "uuid",
+      ctx
+    );
+    // Should have UUID prefix and sanitized filename
+    expect(result).toMatch(UUID_PATH_TRAVERSAL_REGEX);
+    expect(result).not.toContain("/");
   });
 
   test("handles filename without extension", () => {
@@ -65,6 +170,22 @@ describe("resolveAttachmentFilename", () => {
       ctx
     );
     expect(result).toBe("20251122T123456_archive.tar.gz");
+  });
+
+  test("handles Windows path separators", () => {
+    const result = resolveAttachmentFilename(
+      "C:\\windows\\file.txt",
+      "original",
+      ctx
+    );
+    expect(result).toBe("C:windowsfile.txt");
+    expect(result).not.toContain("\\");
+  });
+
+  test("handles null bytes in filename", () => {
+    const result = resolveAttachmentFilename("file\0name.txt", "original", ctx);
+    expect(result).toBe("filename.txt");
+    expect(result).not.toContain("\0");
   });
 });
 
