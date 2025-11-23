@@ -1,42 +1,58 @@
+# Zorter
 
-# zorter
+Zorter is a Zo-native, open-source inbox + sorter + router engine. It accepts arbitrary structured JSON items with optional file attachments, stores them durably, and routes them according to configurable workflows.
 
-Zorter is a Zo‑native, open‑source inbox + sorter + router engine.
+## Features
 
-- Single ingestion endpoint: `POST /items`
-- Filesystem is the source of truth (`inbox/` + `files/`)
-- SQLite index for fast listing & worker polling
-- Types + workflows driven by `zorter.config.toml`
-- Bun/Hono server, easy to run as a Zo User Service
+- **Single ingestion endpoint**: `POST /items` with multipart or JSON support
+- **Filesystem-first storage**: Envelopes in `inbox/`, attachments in `files/`, indexed by SQLite
+- **Type-driven workflows**: Define types and workflows in `zorter.config.toml`
+- **Worker polling**: `GET /items/next` for building distributed consumers
+- **Flexible routing**: Send items to webhooks, workers, or store locally
+- **Path templating**: Control attachment storage with `{channel}/{date}/{eventId}/{filename}` patterns
+- **Multiple auth modes**: Admin and read-only API keys via environment variables
+- **Lightweight**: Bun/Hono server, easy to run as a Zo User Service or standalone
 
-## Install
+## Quick Start
+
+Get Zorter running locally in under 5 minutes:
+
+### 1. Install Dependencies
 
 ```bash
 bun install
-````
+```
 
 Or with npm:
 
 ```bash
-npm install zorter
+npm install
 ```
 
-## Quick start (local)
+### 2. Set Up Environment
 
 ```bash
 export ZORTER_ADMIN_API_KEY="dev-admin-key"
 export ZORTER_READ_API_KEY="dev-read-key"
+```
 
-# set up base dir (matches defaults)
-mkdir -p /home/workspace/Inbox
-cp config/zorter.config.example.toml /home/workspace/Inbox/zorter.config.toml
+### 3. Initialize Base Directory
+
+```bash
 mkdir -p /home/workspace/Inbox/db/migrations
+cp config/zorter.config.example.toml /home/workspace/Inbox/zorter.config.toml
 cp db/migrations/001_init.sql /home/workspace/Inbox/db/migrations/001_init.sql
+```
 
+### 4. Start the Server
+
+```bash
 ZORTER_BASE_DIR=/home/workspace/Inbox bun run src/server.ts
 ```
 
-Then:
+Server listens on `http://localhost:8787` by default.
+
+### 5. Ingest Your First Item
 
 ```bash
 curl -X POST "http://localhost:8787/items" \
@@ -48,150 +64,202 @@ curl -X POST "http://localhost:8787/items" \
   }'
 ```
 
-List items:
+### 6. List Items
 
 ```bash
 curl "http://localhost:8787/items?limit=20" \
   -H "x-api-key: $ZORTER_READ_API_KEY"
 ```
 
-## Zo integration
+You should see your item in the response!
 
-Create a User Service in Zo:
+## Development
 
-* **Label**: `zorter`
-* **Type**: `http`
-* **Local port**: `8787`
-* **Entrypoint**: `bunx zorter start`
-* **Workdir**: `/home/workspace/Inbox`
+### Prerequisites
 
-Copy:
+- Bun >= 1.1 (or Node.js >= 18)
+- SQLite (included with Bun)
 
-* `config/zorter.config.example.toml` → `/home/workspace/Inbox/zorter.config.toml`
-* `db/migrations/001_init.sql` → `/home/workspace/Inbox/db/migrations/001_init.sql`
+### Setup
 
-Set environment variables on the service:
+```bash
+# Install dependencies
+bun install
 
-* `ZORTER_ADMIN_API_KEY`
-* `ZORTER_READ_API_KEY` (optional)
-* `ZORTER_BASE_DIR=/home/workspace/Inbox`
+# Copy example config
+cp config/zorter.config.example.toml /home/workspace/Inbox/zorter.config.toml
 
-## HTTP API
-
-### `POST /items`
-
-Supports:
-
-* `Content-Type: application/json`
-
-  * `{ "type": "update", "payload": { ... }, "attachments": [{ "filename", "mimeType", "base64" }] }`
-* `Content-Type: multipart/form-data`
-
-  * `event` field: JSON blob
-  * file fields: binary file parts
-
-Returns an `ItemView` projection:
-
-```json
-{
-  "item": {
-    "id": "uuid",
-    "type": "update",
-    "channel": "Updates",
-    "createdAt": "2025-11-22T12:34:56.789Z",
-    "hasAttachments": true,
-    "attachmentsCount": 2
-  }
-}
+# Set environment variables
+export ZORTER_ADMIN_API_KEY="dev-admin-key"
+export ZORTER_READ_API_KEY="dev-read-key"
+export ZORTER_BASE_DIR="/home/workspace/Inbox"
 ```
 
-Requires admin API key.
+### Running
 
-### `GET /items`
+```bash
+# Development mode (with hot reload)
+bun run dev
 
-Query params:
+# Production mode
+bun run start
 
-* `type`
-* `channel`
-* `since` / `until` (ISO timestamps)
-* `limit` (default 50, max 100)
-* `cursor` (opaque pagination cursor)
-
-Response:
-
-```json
-{
-  "items": [
-    {
-      "id": "uuid",
-      "type": "update",
-      "channel": "Updates",
-      "createdAt": "2025-11-22T12:34:56.789Z",
-      "hasAttachments": true,
-      "attachmentsCount": 2
-    }
-  ],
-  "nextCursor": "base64-offset-or-null"
-}
+# Or directly
+bun run src/server.ts
 ```
 
-### `GET /items/next`
+### CLI Commands
 
-Worker polling for unclaimed items.
+```bash
+# Start server
+bunx zorter start
 
-Query params:
+# Run migrations only
+bunx zorter migrate
 
-* `consumer` (required)
-* `type`
-* `channel`
-* `limit` (default 10, max 50)
-
-Returns an array of full envelopes:
-
-```json
-{
-  "items": [
-    {
-      "id": "uuid",
-      "type": "update",
-      "channel": "Updates",
-      "payload": { "text": "Hello" },
-      "attachments": [],
-      "createdAt": "2025-11-22T12:34:56.789Z"
-    }
-  ]
-}
+# Help
+bunx zorter help
 ```
 
-Note: items are considered “unclaimed” until a worker `POST`s `/items/:id/ack`.
+### Testing
 
-### `POST /items/:id/ack`
+```bash
+# Run tests
+bun run test
 
-Marks an item as processed by a `consumer`.
+# Run tests in watch mode
+bun run test:watch
 
-* Path param: `id`
-* Body or query: `{ "consumer": "worker-name" }`
+# Lint and check code
+bun run lint
 
-Returns:
-
-```json
-{ "status": "ok", "id": "…", "consumer": "worker-name" }
+# Lint and auto-fix issues
+bun run check
 ```
 
-### `GET /health`
+### Git Hooks
 
-Simple health check:
+This project uses [Lefthook](https://github.com/evilmartians/lefthook) for automated pre-commit and pre-push checks:
 
-```json
-{ "status": "ok" }
+**Pre-commit hooks** (run in parallel):
+- **format**: Auto-format code using Biome
+- **lint**: Check code quality with Biome
+- **types**: TypeScript type checking with `tsc --noEmit`
+- **test-related**: Run tests when test files or source files change
+
+**Pre-push hooks**:
+- **test-all**: Run full test suite
+- **lint-strict**: Strict linting with error-on-warnings
+
+Hooks are installed automatically via the `prepare` script when you run `bun install`.
+
+#### Customizing Hooks
+
+To customize hooks for your local workflow, copy the example:
+
+```bash
+cp .lefthook-local.yml.example .lefthook-local.yml
 ```
 
-### Auth
+Then edit `.lefthook-local.yml` to skip expensive checks during fast iteration:
 
-* Header: `x-api-key: YOUR_KEY`
-* Or: `authorization: Bearer YOUR_KEY`
+```yaml
+# Skip type checking and tests on commit (faster iteration)
+pre-commit:
+  commands:
+    types:
+      skip: true
+    test-related:
+      skip: true
+```
 
-`zorter.config.toml` tells Zorter which env vars to read:
+Your local customizations won't be committed (`.lefthook-local.yml` is in `.gitignore`).
+
+### Project Structure
+
+```
+zorter/
+  bin/
+    zorter.ts              # CLI entrypoint
+  src/
+    types.ts               # TypeScript type definitions
+    config.ts              # TOML config loader
+    storage.ts             # SQLite + filesystem storage
+    workflows.ts           # Workflow and routing logic
+    server.ts              # Hono HTTP server
+  config/
+    zorter.config.example.toml
+    routes.example.json
+  db/
+    migrations/
+      001_init.sql
+  docs/
+    API.md                 # API reference
+    CONFIGURATION.md       # Configuration guide
+```
+
+## Documentation
+
+- **[API Reference](docs/API.md)**: Complete HTTP API documentation with examples
+- **[Configuration Guide](docs/CONFIGURATION.md)**: TOML schema, path templates, workflows, and route profiles
+
+## Zo Integration
+
+Deploy Zorter as a Zo User Service:
+
+### 1. Create User Service
+
+Configure in Zo:
+
+- **Label**: `zorter`
+- **Type**: `http`
+- **Local port**: `8787`
+- **Entrypoint**: `bunx zorter start`
+- **Workdir**: `/home/workspace/Inbox`
+
+### 2. Copy Configuration Files
+
+```bash
+cp config/zorter.config.example.toml /home/workspace/Inbox/zorter.config.toml
+cp db/migrations/001_init.sql /home/workspace/Inbox/db/migrations/001_init.sql
+```
+
+### 3. Set Environment Variables
+
+Add to your Zo service configuration:
+
+- `ZORTER_ADMIN_API_KEY` (required)
+- `ZORTER_READ_API_KEY` (optional, recommended)
+- `ZORTER_BASE_DIR=/home/workspace/Inbox`
+
+Your Zorter service will start automatically with Zo.
+
+## API Overview
+
+See **[docs/API.md](docs/API.md)** for complete documentation.
+
+### Core Endpoints
+
+- **`POST /items`**: Ingest items (JSON or multipart with attachments)
+- **`GET /items`**: List items with filtering and cursor pagination
+- **`GET /items/next`**: Worker polling for unclaimed items
+- **`POST /items/:id/ack`**: Acknowledge item processing
+- **`GET /health`**: Health check
+
+### Authentication
+
+```bash
+# Admin key (full access)
+x-api-key: YOUR_ADMIN_KEY
+
+# Read key (read-only)
+x-api-key: YOUR_READ_KEY
+
+# Or Bearer token
+authorization: Bearer YOUR_KEY
+```
+
+Configure in `zorter.config.toml`:
 
 ```toml
 [auth]
@@ -200,41 +268,140 @@ read_api_key_env_var  = "ZORTER_READ_API_KEY"
 required = true
 ```
 
-Admin key is required for ingest and ack; read key can be used for listing and polling.
+### Ingest Examples
 
-## Workflows & routes
+**JSON only**:
 
-Workflows are configured in `zorter.config.toml`:
+```bash
+curl -X POST "http://localhost:8787/items" \
+  -H "content-type: application/json" \
+  -H "x-api-key: YOUR_ADMIN_KEY" \
+  -d '{"type":"update","payload":{"text":"Hello"}}'
+```
+
+**JSON + base64 attachments**:
+
+```bash
+curl -X POST "http://localhost:8787/items" \
+  -H "content-type: application/json" \
+  -H "x-api-key: YOUR_ADMIN_KEY" \
+  -d '{
+    "type":"post",
+    "payload":{"title":"My post"},
+    "attachments":[{"filename":"photo.jpg","mimeType":"image/jpeg","base64":"..."}]
+  }'
+```
+
+**Multipart with files**:
+
+```bash
+curl -X POST "http://localhost:8787/items" \
+  -H "x-api-key: YOUR_ADMIN_KEY" \
+  -F 'event={"type":"post","payload":{"title":"My post"}}' \
+  -F 'photo=@photo.jpg'
+```
+
+## Configuration
+
+See **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** for complete guide.
+
+### Types and Workflows
+
+Define types in `zorter.config.toml`:
+
+```toml
+[types.update]
+description = "Generic status update"
+channel = "Updates"
+
+[workflows.updates]
+type = "update"
+files_path_template = "{baseFilesDir}/Updates/{date}/{eventId}/{filename}"
+append_to_file = "/home/workspace/Inbox/updates.md"
+route_profile = "store_only"
+```
+
+### Path Templates
+
+Control where attachments are stored using tokens:
+
+- `{baseFilesDir}`: Base files directory
+- `{channel}`: Item channel
+- `{date}`: ISO date (YYYY-MM-DD)
+- `{eventId}`: Item UUID
+- `{timestamp}`: Sanitized timestamp
+- `{filename}`: Final filename
+
+Example: `{baseFilesDir}/{channel}/{date}/{eventId}/{filename}`
+Renders: `/home/workspace/Inbox/files/Updates/2025-11-22/550e8400.../photo.jpg`
+
+### Filename Strategies
+
+- `original`: Keep original filename
+- `timestampPrefix`: Prefix with `20251122T123456_`
+- `eventIdPrefix`: Prefix with item UUID
+- `uuid`: Replace filename with new UUID
+
+### Route Profiles
+
+Define routing in `routes.json`:
+
+```json
+{
+  "profiles": {
+    "store_only": {
+      "kind": "noop"
+    },
+    "publish_to_worker": {
+      "kind": "http",
+      "url": "http://localhost:9000/zorter/items",
+      "method": "POST",
+      "enabled": true
+    }
+  }
+}
+```
+
+Reference in workflow:
 
 ```toml
 [workflows.posts]
 type = "post"
-files_path_template = "{baseFilesDir}/Posts/{date}/{eventId}/{filename}"
-append_to_file = "/home/workspace/Inbox/posts_index.md"
 route_profile = "publish_to_worker"
 ```
 
-Route profiles are declared in `routes.json` (runtime) using the schema illustrated in `config/routes.example.json`.
-
-* `store_only` → no outbound routing
-* `publish_to_worker` → POST envelope to external worker
-
-Routing failures are logged to stdout and do not block ingestion.
-
-## Storage layout
+## Storage Layout
 
 Given `base_dir = "/home/workspace/Inbox"`:
 
-* Envelopes: `/home/workspace/Inbox/inbox/YYYY-MM-DD/<id>.json`
-* Attachments: path templates (defaults to `{baseFilesDir}/{channel}/{date}/{eventId}/{filename}`)
-* SQLite: `/home/workspace/Inbox/db/zorter.db`
-* Logs (for future use): `/home/workspace/Inbox/logs/`
+```
+/home/workspace/Inbox/
+  zorter.config.toml
+  routes.json
+  inbox/
+    YYYY-MM-DD/
+      <item-id>.json      # Item envelopes
+  files/
+    <channel>/
+      YYYY-MM-DD/
+        <item-id>/
+          <filename>        # Attachments
+  db/
+    zorter.db              # SQLite index
+    migrations/
+      001_init.sql
+  logs/                    # Reserved for future use
+```
 
-SQLite table: `items` with columns:
+### SQLite Schema
 
-* `id`, `type`, `channel`, `created_at`
-* `file_path`, `file_dir`
-* `attachments_count`, `has_attachments`
-* `claimed_by`, `claimed_at`
-* `summary` (reserved for future previews)
+Table `items`:
+
+- `id`, `type`, `channel`, `created_at`
+- `file_path`, `file_dir`
+- `attachments_count`, `has_attachments`
+- `claimed_by`, `claimed_at`
+- `summary` (reserved for future previews)
+
+Indexes on `created_at`, `type`, `channel`, `has_attachments` for fast queries.
 
