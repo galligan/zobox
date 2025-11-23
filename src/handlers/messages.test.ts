@@ -325,6 +325,7 @@ describe("toMessageView", () => {
         },
       ],
       createdAt: "2025-11-22T12:00:00Z",
+      tags: [],
     };
 
     const view = toMessageView(envelope);
@@ -346,6 +347,7 @@ describe("toMessageView", () => {
       payload: { text: "Hello" },
       attachments: [],
       createdAt: "2025-11-22T13:00:00Z",
+      tags: [],
     };
 
     const view = toMessageView(envelope);
@@ -367,7 +369,7 @@ describe("integration: processAndStoreMessage", () => {
     };
 
     const mockConfig: Partial<ZoboxConfig> = {
-      zorter: {
+      zobox: {
         base_dir: "/test",
         db_path: "/test/db/zobox.db",
         default_channel: "default",

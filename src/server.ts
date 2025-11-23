@@ -123,8 +123,8 @@ export async function startServer(options?: {
     }
 
     const query = c.req.query();
-    const consumer = query.consumer;
-    if (!consumer) {
+    const subscriber = query.subscriber;
+    if (!subscriber) {
       return c.json({ error: '"subscriber" query parameter is required' }, 400);
     }
 
@@ -148,7 +148,7 @@ export async function startServer(options?: {
     }
 
     const id = c.req.param("id");
-    let consumer: string | undefined;
+    let subscriber: string | undefined;
 
     try {
       const body = (await c.req.json().catch(() => ({}))) as unknown;
@@ -156,20 +156,20 @@ export async function startServer(options?: {
         body &&
         typeof body === "object" &&
         "subscriber" in body &&
-        typeof body.consumer === "string"
+        typeof body.subscriber === "string"
       ) {
-        consumer = body.consumer;
+        subscriber = body.subscriber;
       }
     } catch {
       // ignore body parse errors, handled below
     }
 
-    const qConsumer = c.req.query("subscriber");
-    if (!consumer && qConsumer) {
-      consumer = qConsumer;
+    const qSubscriber = c.req.query("subscriber");
+    if (!subscriber && qSubscriber) {
+      subscriber = qSubscriber;
     }
 
-    if (!consumer) {
+    if (!subscriber) {
       return c.json(
         {
           error: '"subscriber" must be provided in body or query string',
@@ -178,7 +178,7 @@ export async function startServer(options?: {
       );
     }
 
-    const ok = ackMessage(runtimeCtx.storage, id, consumer);
+    const ok = ackMessage(runtimeCtx.storage, id, subscriber);
     if (!ok) {
       return c.json(
         {
@@ -188,7 +188,7 @@ export async function startServer(options?: {
       );
     }
 
-    return c.json({ status: "ok", id, consumer });
+    return c.json({ status: "ok", id, subscriber });
   });
 
   // Reserved admin config endpoints (V1: not implemented)

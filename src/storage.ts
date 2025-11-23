@@ -309,7 +309,7 @@ export function queryMessages(
   const offset = decodeCursor(cursor);
 
   let sql =
-    "SELECT id, type, channel, created_at, has_attachments, attachments_count FROM messages WHERE 1=1";
+    "SELECT id, type, channel, created_at, has_attachments, attachments_count, tags FROM messages WHERE 1=1";
   const params: Record<string, unknown> = {};
 
   if (filters.type) {
@@ -342,6 +342,7 @@ export function queryMessages(
     created_at: string;
     has_attachments: number;
     attachments_count: number;
+    tags: string | null;
   }[];
 
   const items: MessageView[] = rows.map((row) => ({
@@ -351,6 +352,7 @@ export function queryMessages(
     createdAt: row.created_at,
     hasAttachments: !!row.has_attachments,
     attachmentsCount: row.attachments_count,
+    tags: row.tags ? JSON.parse(row.tags) : [],
   }));
 
   const nextOffset = offset + items.length;

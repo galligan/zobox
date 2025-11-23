@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
-  MessageEnvelope,
   Destination,
   DestinationsConfig,
+  MessageEnvelope,
 } from "../types";
-import { invokeHttpProfile, routeItem, validateDestination } from "./profiles";
+import {
+  invokeHttpProfile,
+  routeItem,
+  validateDestination,
+} from "./destinations";
 
 describe("validateDestination", () => {
   const mockDestinationsConfig: DestinationsConfig = {
@@ -126,6 +130,7 @@ describe("invokeHttpProfile", () => {
     payload: { title: "Test Item" },
     attachments: [],
     createdAt: "2025-01-01T12:00:00Z",
+    tags: [],
   };
 
   beforeEach(() => {
@@ -356,6 +361,7 @@ describe("routeItem", () => {
     payload: { title: "Test Item" },
     attachments: [],
     createdAt: "2025-01-01T12:00:00Z",
+    tags: [],
   };
 
   const mockDestinationsConfig: DestinationsConfig = {

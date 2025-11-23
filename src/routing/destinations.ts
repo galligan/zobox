@@ -1,8 +1,8 @@
 import { logger } from "../logger.js";
 import type {
-  MessageEnvelope,
   Destination,
   DestinationsConfig,
+  MessageEnvelope,
 } from "../types";
 
 /**

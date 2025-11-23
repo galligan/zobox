@@ -6,6 +6,8 @@ import {
   AuthSectionSchema,
   Base64AttachmentInputSchema,
   BinaryAttachmentInputSchema,
+  DestinationSchema,
+  DestinationsConfigSchema,
   FilenameStrategySchema,
   FilesSectionSchema,
   MessageEnvelopeSchema,
@@ -14,10 +16,8 @@ import {
   MessageViewSchema,
   NewMessageInputSchema,
   QueryMessagesResultSchema,
-  DestinationSchema,
-  DestinationsConfigSchema,
-  TypeDefinitionSchema,
   SorterDefinitionSchema,
+  TypeDefinitionSchema,
   ZoboxConfigSchema,
   ZoboxSectionSchema,
 } from "./schemas";
@@ -335,7 +335,7 @@ describe("ZoboxConfigSchema", () => {
     };
     const result = ZoboxConfigSchema.parse(input);
     expect(result.types).toEqual({});
-    expect(result.workflows).toEqual({});
+    expect(result.sorters).toEqual({});
     expect(result.tools).toBeUndefined();
   });
 
@@ -694,6 +694,7 @@ describe("MessageEnvelopeSchema", () => {
       attachments: [],
       meta: { user_id: "123" },
       createdAt: "2025-11-22T12:34:56.789Z",
+      tags: [],
     };
     const result = MessageEnvelopeSchema.parse(input);
     expect(result).toEqual(input);
@@ -783,6 +784,7 @@ describe("MessageViewSchema", () => {
       createdAt: "2025-11-22T12:34:56.789Z",
       hasAttachments: true,
       attachmentsCount: 2,
+      tags: [],
     };
     const result = MessageViewSchema.parse(input);
     expect(result).toEqual(input);
@@ -836,6 +838,7 @@ describe("QueryMessagesResultSchema", () => {
           createdAt: "2025-11-22T12:34:56.789Z",
           hasAttachments: false,
           attachmentsCount: 0,
+          tags: [],
         },
       ],
       nextCursor: "base64cursor",

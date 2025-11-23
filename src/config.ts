@@ -79,7 +79,7 @@ function buildConfigWithDefaults(
         (rawFiles.keep_base64_in_envelope as boolean) ?? false,
     },
     types: (raw.types ?? {}) as Record<string, unknown>,
-    sorters: (raw.workflows ?? {}) as Record<string, unknown>,
+    sorters: (raw.sorters ?? {}) as Record<string, unknown>,
     tools: raw.tools as Record<string, unknown> | undefined,
   };
 }

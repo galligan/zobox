@@ -8,8 +8,8 @@ import type {
   AttachmentContext,
   AttachmentEnvelope,
   AttachmentInput,
-  MessageEnvelope,
   DestinationsConfig,
+  MessageEnvelope,
   SorterDefinition,
   ZoboxConfig,
 } from "./types";

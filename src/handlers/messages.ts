@@ -23,10 +23,10 @@ import type { Storage } from "../storage.js";
 import { insertMessageIndex, writeEnvelope } from "../storage.js";
 import type {
   AttachmentInput,
+  DestinationsConfig,
   MessageEnvelope,
   MessageIndexRow,
   NewMessageInput,
-  DestinationsConfig,
   ZoboxConfig,
 } from "../types.js";
 import { parseJson } from "../utils/json.js";
@@ -229,6 +229,7 @@ export function createMessageEnvelope(
     attachments: processedAttachments.attachments,
     meta: item.meta,
     createdAt: metadata.createdAt,
+    tags: item.tags ?? [],
   };
 }
 

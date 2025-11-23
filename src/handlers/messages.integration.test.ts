@@ -38,7 +38,7 @@ describe("POST /items handler integration", () => {
     );
 
     const config: ZoboxConfig = {
-      zorter: {
+      zobox: {
         base_dir: tempDir,
         db_path: path.join(tempDir, "db", "zobox.db"),
         default_channel: "default",
