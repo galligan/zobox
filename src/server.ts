@@ -93,7 +93,7 @@ export async function startServer(options?: {
     }
   });
 
-  app.get("/messages", (c) => {
+  app.get("/messages", async (c) => {
     const runtimeCtx = c.get("runtime");
     const auth = authenticate(c, runtimeCtx.config);
     if ("error" in auth) {
@@ -111,7 +111,12 @@ export async function startServer(options?: {
     const limit = query.limit ? Number.parseInt(query.limit, 10) : 50;
     const cursor = query.cursor || undefined;
 
-    const result = queryMessages(runtimeCtx.storage, filters, limit, cursor);
+    const result = await queryMessages(
+      runtimeCtx.storage,
+      filters,
+      limit,
+      cursor
+    );
     return c.json(result);
   });
 
@@ -189,6 +194,54 @@ export async function startServer(options?: {
     }
 
     return c.json({ status: "ok", id, subscriber });
+  });
+
+  // Tag management endpoints
+  app.get("/tags", (c) => {
+    const runtimeCtx = c.get("runtime");
+    const auth = authenticate(c, runtimeCtx.config);
+    if ("error" in auth) {
+      return c.json(auth.error, auth.status as 401 | 403);
+    }
+
+    const query = c.req.query();
+    const limit = query.limit ? Number.parseInt(query.limit, 10) : 100;
+    const offset = query.offset ? Number.parseInt(query.offset, 10) : 0;
+    const search = query.search;
+
+    const { listAllTags, searchTags } = require("./storage.js");
+
+    if (search) {
+      const tags = searchTags(runtimeCtx.storage.db, search, limit);
+      return c.json({ tags });
+    }
+
+    const tags = listAllTags(runtimeCtx.storage.db, limit, offset);
+    return c.json({ tags });
+  });
+
+  app.post("/tags/merge", async (c) => {
+    const runtimeCtx = c.get("runtime");
+    const auth = authenticate(c, runtimeCtx.config, { requireAdmin: true });
+    if ("error" in auth) {
+      return c.json(auth.error, auth.status as 401 | 403);
+    }
+
+    try {
+      const body = await c.req.json();
+      const { MergeTagsInputSchema } = await import("./schemas.js");
+      const input = MergeTagsInputSchema.parse(body);
+
+      const { mergeTags } = await import("./storage.js");
+      const mergedTag = mergeTags(runtimeCtx.storage.db, input);
+
+      return c.json({ tag: mergedTag }, 200);
+    } catch (err) {
+      if (err instanceof Error) {
+        return c.json({ error: err.message }, 400);
+      }
+      return c.json({ error: "Failed to merge tags" }, 500);
+    }
   });
 
   // Reserved admin config endpoints (V1: not implemented)

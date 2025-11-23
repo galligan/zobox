@@ -79,6 +79,7 @@ export function initStorage(config: ZoboxConfig): Storage {
   }
 
   ensureInitMigrationFile(migrationsDir);
+  ensureTagsMigrationFile(migrationsDir);
 
   const db = new Database(dbPath);
   runMigrations(db, migrationsDir);
@@ -125,6 +126,76 @@ CREATE INDEX IF NOT EXISTS idx_messages_channel ON items (channel);
 CREATE INDEX IF NOT EXISTS idx_messages_has_attachments ON items (has_attachments);
 `.trimStart();
     fs.writeFileSync(initPath, sql, "utf8");
+  }
+}
+
+/**
+ * Ensure tags migration file exists.
+ * Creates 002_tags.sql with tag tables schema if it doesn't exist.
+ */
+function ensureTagsMigrationFile(migrationsDir: string) {
+  const tagsPath = path.join(migrationsDir, "002_tags.sql");
+  if (!fs.existsSync(tagsPath)) {
+    const sql = `
+-- Migration 002: Normalize tags into separate tables
+-- This migration creates a proper relational structure for tags with extensibility
+
+-- Tags table: canonical list of all tags
+CREATE TABLE IF NOT EXISTS tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  description TEXT,
+  color TEXT,
+  created_at TEXT NOT NULL,
+  created_by TEXT DEFAULT 'system',
+  metadata TEXT
+);
+
+-- Message-Tags junction table: many-to-many relationship
+CREATE TABLE IF NOT EXISTS message_tags (
+  message_id TEXT NOT NULL,
+  tag_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  added_by TEXT DEFAULT 'system',
+  source TEXT DEFAULT 'user',  -- 'user' | 'sorter' | 'api' | 'ml'
+  metadata TEXT,
+  PRIMARY KEY (message_id, tag_id),
+  FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_message_tags_message_id ON message_tags(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_tags_tag_id ON message_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_message_tags_source ON message_tags(source);
+
+-- Migrate existing tags from messages.tags JSON column to new structure
+-- This is safe to run multiple times (idempotent)
+INSERT OR IGNORE INTO tags (name, created_at, created_by)
+SELECT DISTINCT
+  json_each.value as name,
+  datetime('now') as created_at,
+  'migration' as created_by
+FROM messages, json_each(messages.tags)
+WHERE messages.tags IS NOT NULL
+  AND messages.tags != '[]'
+  AND json_each.value != '';
+
+-- Migrate message-tag relationships
+INSERT OR IGNORE INTO message_tags (message_id, tag_id, created_at, source)
+SELECT
+  messages.id as message_id,
+  tags.id as tag_id,
+  messages.created_at as created_at,
+  'migration' as source
+FROM messages, json_each(messages.tags)
+JOIN tags ON tags.name = json_each.value COLLATE NOCASE
+WHERE messages.tags IS NOT NULL
+  AND messages.tags != '[]'
+  AND json_each.value != '';
+`.trimStart();
+    fs.writeFileSync(tagsPath, sql, "utf8");
   }
 }
 
@@ -299,12 +370,12 @@ function decodeCursor(cursor?: string | null): number {
  * }
  * ```
  */
-export function queryMessages(
+export async function queryMessages(
   storage: Storage,
   filters: MessageFilters,
   limit: number,
   cursor?: string | null
-): QueryMessagesResult {
+): Promise<QueryMessagesResult> {
   const safeLimit = Math.min(Math.max(limit, 1), 100);
   const offset = decodeCursor(cursor);
 
@@ -345,6 +416,9 @@ export function queryMessages(
     tags: string | null;
   }[];
 
+  // Import tag functions dynamically to avoid circular dependency
+  const { getTagsByMessageId } = await import("./storage/tags.js");
+
   const items: MessageView[] = rows.map((row) => ({
     id: row.id,
     type: row.type,
@@ -352,7 +426,7 @@ export function queryMessages(
     createdAt: row.created_at,
     hasAttachments: !!row.has_attachments,
     attachmentsCount: row.attachments_count,
-    tags: row.tags ? JSON.parse(row.tags) : [],
+    tags: getTagsByMessageId(storage.db, row.id),
   }));
 
   const nextOffset = offset + items.length;
@@ -493,3 +567,16 @@ WHERE id = @id
   const result = stmt.run({ id, consumer, subscribedAt: now });
   return result.changes > 0;
 }
+
+// Re-export tag operations from tags module
+// biome-ignore lint/performance/noBarrelFile: Tag operations are logically separate but exported here for convenience
+export {
+  addTagsToMessage,
+  getTagsByIds,
+  getTagsByMessageId,
+  listAllTags,
+  mergeTags,
+  removeTagsFromMessage,
+  resolveTagIds,
+  searchTags,
+} from "./storage/tags.js";

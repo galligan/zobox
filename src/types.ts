@@ -19,13 +19,17 @@ import type {
   DestinationsConfig as ZodDestinationsConfig,
   FilenameStrategy as ZodFilenameStrategy,
   FilesSection as ZodFilesSection,
+  MergeTagsInput as ZodMergeTagsInput,
   MessageEnvelope as ZodMessageEnvelope,
   MessageFilters as ZodMessageFilters,
   MessageIndexRow as ZodMessageIndexRow,
+  MessageTag as ZodMessageTag,
   MessageView as ZodMessageView,
   NewMessageInput as ZodNewMessageInput,
   QueryMessagesResult as ZodQueryMessagesResult,
   SorterDefinition as ZodSorterDefinition,
+  Tag as ZodTag,
+  TagWithUsage as ZodTagWithUsage,
   TypeDefinition as ZodTypeDefinition,
   ZoboxConfig as ZodZoboxConfig,
   ZoboxSection as ZodZoboxSection,
@@ -165,3 +169,28 @@ export type NewMessageInput = ZodNewMessageInput;
  * Contains item metadata needed for path generation and filename strategies.
  */
 export type AttachmentContext = ZodAttachmentContext;
+
+// Tag types
+
+/**
+ * Tag entity with metadata.
+ * Represents a canonical tag that can be applied to multiple messages.
+ */
+export type Tag = ZodTag;
+
+/**
+ * Tag with usage count for analytics and listing.
+ */
+export type TagWithUsage = ZodTagWithUsage;
+
+/**
+ * Message-tag relationship record.
+ * Tracks the association between a message and a tag, including provenance.
+ */
+export type MessageTag = ZodMessageTag;
+
+/**
+ * Input for merging multiple tags into one.
+ * Supports merging to an existing tag or creating a new one.
+ */
+export type MergeTagsInput = ZodMergeTagsInput;

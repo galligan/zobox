@@ -265,6 +265,18 @@ export async function storeAndProcessItem(
 
   insertMessageIndex(runtime.storage, index);
 
+  // Add tags to message_tags table (auto-creates new tags as needed)
+  if (envelope.tags && envelope.tags.length > 0) {
+    const { addTagsToMessage } = await import("../storage.js");
+    addTagsToMessage(
+      runtime.storage.db,
+      envelope.id,
+      envelope.tags,
+      "api",
+      "api"
+    );
+  }
+
   await applySorterSideEffects(
     sorter,
     envelope,

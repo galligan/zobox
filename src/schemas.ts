@@ -204,6 +204,59 @@ export const AttachmentInputSchema = z.union([
 export type AttachmentInput = z.infer<typeof AttachmentInputSchema>;
 
 // ============================================================================
+// Tag Schemas
+// ============================================================================
+
+/**
+ * Schema for a tag (canonical tag record)
+ */
+export const TagSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().min(1).max(50),
+  description: z.string().optional(),
+  color: z.string().optional(),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().default("system"),
+  metadata: z.unknown().optional(),
+});
+
+export type Tag = z.infer<typeof TagSchema>;
+
+/**
+ * Schema for tag with usage count (for listing/analytics)
+ */
+export const TagWithUsageSchema = TagSchema.extend({
+  usageCount: z.number().int().nonnegative(),
+});
+
+export type TagWithUsage = z.infer<typeof TagWithUsageSchema>;
+
+/**
+ * Schema for message-tag relationship
+ */
+export const MessageTagSchema = z.object({
+  messageId: z.string(),
+  tagId: z.number().int().positive(),
+  createdAt: z.string().datetime(),
+  addedBy: z.string().default("system"),
+  source: z.enum(["user", "sorter", "api", "ml"]).default("user"),
+  metadata: z.unknown().optional(),
+});
+
+export type MessageTag = z.infer<typeof MessageTagSchema>;
+
+/**
+ * Schema for tag merge request
+ */
+export const MergeTagsInputSchema = z.object({
+  sourceTagIds: z.array(z.number().int().positive()).min(1),
+  targetTagId: z.number().int().positive().optional(),
+  newName: z.string().min(1).max(50).optional(),
+});
+
+export type MergeTagsInput = z.infer<typeof MergeTagsInputSchema>;
+
+// ============================================================================
 // Envelope & Storage Schemas
 // ============================================================================
 
@@ -270,7 +323,7 @@ export const MessageViewSchema = z.object({
   createdAt: z.string().datetime(),
   hasAttachments: z.boolean(),
   attachmentsCount: z.number().int().nonnegative(),
-  tags: z.array(z.string()).default([]),
+  tags: z.array(TagSchema).default([]),
 });
 
 export type MessageView = z.infer<typeof MessageViewSchema>;
