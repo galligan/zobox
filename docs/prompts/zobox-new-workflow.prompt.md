@@ -8,7 +8,7 @@ version: 1.0.0
 
 You are helping create a new **sorter** for an existing item type in the Zobox inbox + sorter + router engine.
 
-Sorters define what happens to messages of a specific type: where attachments are stored, what files to append metadata to, and which route profile to use for external routing.
+Sorters define what happens to messages of a specific type: where attachments are stored, what files to append metadata to, and which route destination to use for external routing.
 
 ## Inputs
 
@@ -112,7 +112,7 @@ After editing, verify:
 - [ ] `description` is present and clear
 - [ ] Path template uses only valid tokens
 - [ ] Append target path is valid (if specified)
-- [ ] Route profile exists in routes.json or is "store_only"
+- [ ] Route destination exists in routes.json or is "store_only"
 - [ ] No obviously conflicting sorters for same type
 
 ### 7. Summary

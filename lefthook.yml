@@ -28,7 +28,7 @@ pre-commit:
 
     test-related:
       # Only run tests if test files or source files changed
-      glob: "*.{ts,test.ts}"
+      glob: "*.ts"
       run: bun test --bail --run
       skip:
         - merge

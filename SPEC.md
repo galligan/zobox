@@ -1388,54 +1388,54 @@ function appendToFile(
 }
 
 async function routeItem(
-  profileName: string,
+  destinationName: string,
   envelope: MessageEnvelope,
-  routesConfig?: RoutesConfig,
+  routesConfig?: DestinationsConfig,
 ): Promise<void> {
-  if (!profileName || profileName === 'store_only') return;
+  if (!destinationName || destinationName === 'store_only') return;
 
   if (!routesConfig) {
     console.warn(
-      `[zobox] route profile "${profileName}" requested but no routes.json loaded`,
+      `[zobox] route destination "${destinationName}" requested but no routes.json loaded`,
     );
     return;
   }
 
-  const profile = routesConfig.profiles[profileName];
-  if (!profile) {
+  const destination = routesConfig.destinations[destinationName];
+  if (!destination) {
     console.warn(
-      `[zobox] route profile "${profileName}" not found in routes.json`,
+      `[zobox] route destination "${destinationName}" not found in routes.json`,
     );
     return;
   }
-  if (profile.enabled === false) return;
-  if ((profile.kind && profile.kind !== 'http') || !profile.url) {
+  if (destination.enabled === false) return;
+  if ((destination.kind && destination.kind !== 'http') || !destination.url) {
     console.warn(
-      `[zobox] route profile "${profileName}" is not an HTTP profile or missing url`,
+      `[zobox] route destination "${destinationName}" is not an HTTP destination or missing url`,
     );
     return;
   }
 
-  const method = (profile.method || 'POST').toUpperCase();
+  const method = (destination.method || 'POST').toUpperCase();
   const headers: Record<string, string> = {
     'content-type': 'application/json',
-    ...(profile.headers ?? {}),
+    ...(destination.headers ?? {}),
   };
 
   try {
-    const res = await fetch(profile.url, {
+    const res = await fetch(destination.url, {
       method,
       headers,
       body: JSON.stringify(envelope),
     });
     if (!res.ok) {
       console.warn(
-        `[zobox] route "${profileName}" HTTP ${res.status} when sending to ${profile.url}`,
+        `[zobox] route "${destinationName}" HTTP ${res.status} when sending to ${destination.url}`,
       );
     }
   } catch (err) {
     console.error(
-      `[zobox] route "${profileName}" failed:`,
+      `[zobox] route "${destinationName}" failed:`,
       err instanceof Error ? err.message : err,
     );
   }
@@ -2271,11 +2271,11 @@ Supports:
   * `event` field: JSON blob
   * file fields: binary file parts
 
-Returns an `MessageView` projection:
+Returns a `MessageView` projection:
 
 ```json
 {
-  "item": {
+  "message": {
     "id": "uuid",
     "type": "update",
     "channel": "Updates",
@@ -2475,12 +2475,12 @@ and optional routing config:
      - Keep env var names simple and UPPER_SNAKE_CASE.
    - Make edits using precise TOML updates; keep formatting readable.
 
-4. **Routing profiles**
+4. **Routing destinations**
 
    - If I ask to send messages to external workers or webhooks:
      - Read `/home/workspace/Inbox/routes.json` if it exists.
-     - If it doesn’t, create it based on `config/routes.example.json`.
-     - Add/modify a `profiles.<name>` entry with:
+     - If it doesn't, create it based on `config/routes.example.json`.
+     - Add/modify a `destinations.<name>` entry with:
        - `kind: "http"`
        - `url`
        - Optional `method`, `headers`, `enabled`, `timeoutMs`.
@@ -2497,7 +2497,7 @@ and optional routing config:
 
    - Report back:
      - Which sections you changed.
-     - New/updated types, sorters, and route profiles.
+     - New/updated types, sorters, and route destinations.
      - Any manual steps I should take next (e.g. restart the Zobox service, update env vars).
 
 Use concise, technical language. Prefer editing the existing config over inventing new abstractions.

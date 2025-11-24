@@ -144,12 +144,12 @@ export type QueryMessagesResult = ZodQueryMessagesResult;
 
 /**
  * Routes configuration loaded from routes.json.
- * Defines HTTP routing profiles for sorter integration.
+ * Defines HTTP routing destinations for sorter integration.
  */
 export type DestinationsConfig = ZodDestinationsConfig;
 
 /**
- * HTTP route profile for posting items to external systems.
+ * HTTP route destination for posting messages to external systems.
  * Configures URL, method, headers, and timeout.
  */
 export type Destination = ZodDestination;

@@ -47,8 +47,10 @@ function parseArgs(argv: string[]): CliArgs {
       i += 1;
     } else if ((arg === "--port" || arg === "-p") && nextArg) {
       const parsed = Number.parseInt(nextArg, 10);
-      if (Number.isFinite(parsed)) {
+      if (Number.isFinite(parsed) && parsed > 0 && parsed <= 65_535) {
         result.port = parsed;
+      } else {
+        throw new Error(`Invalid port: ${nextArg} (must be 1-65535)`);
       }
       i += 1;
     } else if (arg === "--help" || arg === "-h") {

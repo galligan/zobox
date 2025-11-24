@@ -7,12 +7,13 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TEXT NOT NULL,
   file_path TEXT NOT NULL,
   file_dir TEXT,
-  attachments_count INTEGER NOT NULL DEFAULT 0,
-  has_attachments INTEGER NOT NULL DEFAULT 0,
+  attachments_count INTEGER NOT NULL DEFAULT 0 CHECK (attachments_count >= 0),
+  has_attachments INTEGER NOT NULL DEFAULT 0 CHECK (has_attachments IN (0, 1)),
   subscribed_by TEXT,
   subscribed_at TEXT,
   summary TEXT,
-  tags TEXT
+  tags TEXT,
+  CHECK (has_attachments = 0 OR attachments_count > 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages (created_at);

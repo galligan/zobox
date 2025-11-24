@@ -342,10 +342,10 @@ Recommend:
 
 **Agent**:
 ```
-I'll create a route profile for your worker endpoint.
+I'll create a route destination for your worker endpoint.
 
 Details:
-- Profile name: send_to_worker
+- Destination name: send_to_worker
 - URL: http://localhost:9000/jobs
 - Method: POST
 - Headers: x-api-key

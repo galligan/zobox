@@ -30,7 +30,7 @@ Comprehensive configuration reference covering:
 - TOML schema for all sections (`[zobox]`, `[auth]`, `[files]`, `[types.*]`, `[sorters.*]`)
 - Path template tokens (`{channel}`, `{date}`, `{eventId}`, `{filename}`)
 - Filename strategies (original, timestampPrefix, eventIdPrefix, uuid)
-- Route profiles (HTTP, noop)
+- Route destinations (HTTP, noop)
 - sorter examples for common use cases
 
 **Quick Links**:
@@ -38,7 +38,7 @@ Comprehensive configuration reference covering:
 - [Configuration File Structure](CONFIGURATION.md#configuration-file-structure)
 - [Path Template Tokens](CONFIGURATION.md#path-template-tokens)
 - [Filename Strategies](CONFIGURATION.md#filename-strategies)
-- [Route Profiles](CONFIGURATION.md#route-profiles)
+- [Route Destinations](CONFIGURATION.md#route-destinations)
 - [sorter Examples](CONFIGURATION.md#sorter-examples)
 
 ## Quick Start

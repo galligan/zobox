@@ -201,7 +201,7 @@ zobox/
 ## Documentation
 
 - **[API Reference](docs/API.md)**: Complete HTTP API documentation with examples
-- **[Configuration Guide](docs/CONFIGURATION.md)**: TOML schema, path templates, sorters, and route profiles
+- **[Configuration Guide](docs/CONFIGURATION.md)**: TOML schema, path templates, sorters, and route destinations
 
 ## Zo Integration
 
@@ -342,7 +342,7 @@ Renders: `/home/workspace/Inbox/files/Updates/2025-11-22/550e8400.../photo.jpg`
 - `eventIdPrefix`: Prefix with item UUID
 - `uuid`: Replace filename with new UUID
 
-### Route Profiles
+### Route Destinations
 
 Define routing in `routes.json`:
 

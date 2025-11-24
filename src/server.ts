@@ -14,7 +14,9 @@ import {
   ackMessage,
   findUnclaimedMessages,
   initStorage,
+  listAllTags,
   queryMessages,
+  searchTags,
 } from "./storage.js";
 import type { MessageFilters, ZoboxConfig } from "./types.js";
 
@@ -155,18 +157,14 @@ export async function startServer(options?: {
     const id = c.req.param("id");
     let subscriber: string | undefined;
 
-    try {
-      const body = (await c.req.json().catch(() => ({}))) as unknown;
-      if (
-        body &&
-        typeof body === "object" &&
-        "subscriber" in body &&
-        typeof body.subscriber === "string"
-      ) {
-        subscriber = body.subscriber;
-      }
-    } catch {
-      // ignore body parse errors, handled below
+    const body = (await c.req.json().catch(() => ({}))) as unknown;
+    if (
+      body &&
+      typeof body === "object" &&
+      "subscriber" in body &&
+      typeof body.subscriber === "string"
+    ) {
+      subscriber = body.subscriber;
     }
 
     const qSubscriber = c.req.query("subscriber");
@@ -208,8 +206,6 @@ export async function startServer(options?: {
     const limit = query.limit ? Number.parseInt(query.limit, 10) : 100;
     const offset = query.offset ? Number.parseInt(query.offset, 10) : 0;
     const search = query.search;
-
-    const { listAllTags, searchTags } = require("./storage.js");
 
     if (search) {
       const tags = searchTags(runtimeCtx.storage.db, search, limit);

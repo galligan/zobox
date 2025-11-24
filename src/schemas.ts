@@ -142,9 +142,11 @@ export type Destination = z.infer<typeof DestinationSchema>;
 /**
  * Schema for routes.json
  */
-export const DestinationsConfigSchema = z.object({
-  destinations: z.record(z.string(), DestinationSchema),
-});
+export const DestinationsConfigSchema = z
+  .object({
+    destinations: z.record(z.string(), DestinationSchema),
+  })
+  .passthrough();
 
 export type DestinationsConfig = z.infer<typeof DestinationsConfigSchema>;
 

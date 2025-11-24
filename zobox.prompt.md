@@ -17,7 +17,7 @@ and optional routing config:
   - Add or update a **type**
   - Add or update a **sorter**
   - Change global settings (base_dir, auth, files)
-  - Add or update a **route profile**
+  - Add or update a **route destination**
 
 ## Procedure
 
@@ -47,12 +47,12 @@ and optional routing config:
      - Keep env var names simple and UPPER_SNAKE_CASE.
    - Make edits using precise TOML updates; keep formatting readable.
 
-4. **Routing profiles**
+4. **Routing destinations**
 
   - If I ask to send messages to external workers or webhooks:
      - Read `/home/workspace/Inbox/routes.json` if it exists.
-     - If it doesn’t, create it based on `config/routes.example.json`.
-     - Add/modify a `profiles.<name>` entry with:
+     - If it doesn't, create it based on `config/routes.example.json`.
+     - Add/modify a `destinations.<name>` entry with:
        - `kind: "http"`
        - `url`
        - Optional `method`, `headers`, `enabled`, `timeoutMs`.
@@ -69,7 +69,7 @@ and optional routing config:
 
    - Report back:
      - Which sections you changed.
-    - New/updated types, sorters, and route profiles.
+    - New/updated types, sorters, and route destinations.
      - Any manual steps I should take next (e.g. restart the Zobox service, update env vars).
 
 Use concise, technical language. Prefer editing the existing config over inventing new abstractions.
