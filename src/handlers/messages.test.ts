@@ -200,6 +200,78 @@ describe("parseJsonRequest", () => {
       ValidationError
     );
   });
+
+  it("should parse and normalize tags array from JSON request", async () => {
+    const message = {
+      type: "task",
+      payload: { title: "Test task" },
+      tags: ["urgent", "  work  ", "", "bug"],
+    };
+
+    const mockContext = {
+      req: {
+        json: async () => message,
+      },
+    } as any;
+
+    const result = await parseJsonRequest(mockContext);
+
+    expect(result.message.type).toBe("task");
+    expect(result.message.tags).toEqual(["urgent", "work", "bug"]);
+  });
+
+  it("should handle non-string tags by coercing to strings", async () => {
+    const message = {
+      type: "task",
+      payload: { title: "Test task" },
+      tags: ["tag1", 123, true, null],
+    };
+
+    const mockContext = {
+      req: {
+        json: async () => message,
+      },
+    } as any;
+
+    const result = await parseJsonRequest(mockContext);
+
+    expect(result.message.tags).toEqual(["tag1", "123", "true", "null"]);
+  });
+
+  it("should set tags to undefined if not provided", async () => {
+    const message = {
+      type: "task",
+      payload: { title: "Test task" },
+    };
+
+    const mockContext = {
+      req: {
+        json: async () => message,
+      },
+    } as any;
+
+    const result = await parseJsonRequest(mockContext);
+
+    expect(result.message.tags).toBeUndefined();
+  });
+
+  it("should set tags to undefined if not an array", async () => {
+    const message = {
+      type: "task",
+      payload: { title: "Test task" },
+      tags: "not-an-array",
+    };
+
+    const mockContext = {
+      req: {
+        json: async () => message,
+      },
+    } as any;
+
+    const result = await parseJsonRequest(mockContext);
+
+    expect(result.message.tags).toBeUndefined();
+  });
 });
 
 describe("createMessageEnvelope", () => {
@@ -303,6 +375,61 @@ describe("createMessageEnvelope", () => {
 
     expect(envelope.attachments).toHaveLength(1);
     expect(envelope.attachments[0].filename).toBe("report.pdf");
+  });
+
+  it("should propagate tags from message input to envelope", () => {
+    const message: NewMessageInput = {
+      type: "task",
+      payload: { title: "Test" },
+      tags: ["urgent", "bug", "frontend"],
+    };
+
+    const metadata: ItemMetadata = {
+      id: "test-id",
+      channel: "work",
+      createdAt: "2025-11-22T12:00:00Z",
+      date: "2025-11-22",
+    };
+
+    const processedAttachments = {
+      attachments: [],
+      attachmentsDir: null,
+    };
+
+    const envelope = createMessageEnvelope(
+      message,
+      metadata,
+      processedAttachments
+    );
+
+    expect(envelope.tags).toEqual(["urgent", "bug", "frontend"]);
+  });
+
+  it("should default to empty tags array when not provided", () => {
+    const message: NewMessageInput = {
+      type: "task",
+      payload: { title: "Test" },
+    };
+
+    const metadata: ItemMetadata = {
+      id: "test-id",
+      channel: "work",
+      createdAt: "2025-11-22T12:00:00Z",
+      date: "2025-11-22",
+    };
+
+    const processedAttachments = {
+      attachments: [],
+      attachmentsDir: null,
+    };
+
+    const envelope = createMessageEnvelope(
+      message,
+      metadata,
+      processedAttachments
+    );
+
+    expect(envelope.tags).toEqual([]);
   });
 });
 

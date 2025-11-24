@@ -371,5 +371,12 @@ function normalizeNewMessageInput(raw: unknown): NewMessageInput {
   const source = typeof anyRaw.source === "string" ? anyRaw.source : undefined;
   const meta = anyRaw.meta;
 
-  return { type, payload, channel, source, meta };
+  // Extract and normalize tags array
+  const tags = Array.isArray(anyRaw.tags)
+    ? anyRaw.tags
+        .map((t: unknown) => String(t).trim())
+        .filter((t: string) => t.length > 0)
+    : undefined;
+
+  return { type, payload, channel, source, meta, tags };
 }

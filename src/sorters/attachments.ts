@@ -70,7 +70,7 @@ export function isBinaryAttachment(
  * ```typescript
  * // Path traversal attempt is neutralized
  * resolveAttachmentFilename("../../etc/passwd", "original", ctx);
- * // Returns "..etcpasswd"
+ * // Returns "....etcpasswd"
  *
  * // Normal filename preserved
  * resolveAttachmentFilename("photo.jpg", "timestampPrefix", ctx);
@@ -227,7 +227,7 @@ export function createAttachmentEnvelope(
  *
  * @example
  * ```typescript
- * sanitizeFilename("../../etc/passwd"); // Returns "..etcpasswd"
+ * sanitizeFilename("../../etc/passwd"); // Returns "....etcpasswd"
  * sanitizeFilename("file/with/slashes.txt"); // Returns "filewithslashes.txt"
  * sanitizeFilename("normal-file.jpg"); // Returns "normal-file.jpg"
  * ```

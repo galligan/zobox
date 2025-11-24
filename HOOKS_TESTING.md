@@ -110,10 +110,10 @@ $ bunx tsc --noEmit  # ✓ Works (finds type errors)
 
 ## Files Modified
 
-1. `/Users/mg/Developer/zo/zobox/lefthook.yml` - Main hook configuration
-2. `/Users/mg/Developer/zo/zobox/.lefthook-local.yml.example` - Local customization template
-3. `/Users/mg/Developer/zo/zobox/.gitignore` - Added `.lefthook-local.yml`
-4. `/Users/mg/Developer/zo/zobox/README.md` - Added "Git Hooks" section
+1. `lefthook.yml` - Main hook configuration
+2. `.lefthook-local.yml.example` - Local customization template
+3. `.gitignore` - Added `.lefthook-local.yml`
+4. `README.md` - Added "Git Hooks" section
 
 ## Expected Behavior in Real Use
 

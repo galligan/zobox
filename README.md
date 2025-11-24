@@ -155,7 +155,7 @@ Hooks are installed automatically via the `prepare` script when you run `bun ins
 
 #### Customizing Hooks
 
-To customize hooks for your local sorter, copy the example:
+To customize hooks for your local environment, copy the example:
 
 ```bash
 cp .lefthook-local.yml.example .lefthook-local.yml

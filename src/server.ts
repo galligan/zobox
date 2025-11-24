@@ -293,6 +293,8 @@ function authenticate(
   | { role: "admin" | "read" | "public" }
   | { error: { error: string }; status: number } {
   const required = config.auth.required ?? true;
+  const mustAuth = required || opts.requireAdmin || opts.requireAuthForPublic;
+
   const headerKey =
     c.req.header("x-api-key") ??
     extractBearerToken(c.req.header("authorization"));
@@ -301,7 +303,8 @@ function authenticate(
     ? process.env[config.auth.read_api_key_env_var]
     : undefined;
 
-  if (!(required || headerKey)) {
+  // Only allow unauthenticated access if no auth is required at all
+  if (!(mustAuth || headerKey)) {
     return { role: "public" };
   }
 
@@ -313,8 +316,9 @@ function authenticate(
     role = "read";
   }
 
+  // If we didn't match a role but auth is required, reject
   if (!role) {
-    if (!(required || opts.requireAuthForPublic)) {
+    if (!mustAuth) {
       return { role: "public" };
     }
     return {
@@ -323,6 +327,7 @@ function authenticate(
     };
   }
 
+  // Enforce admin requirement even if auth.required is false
   if (opts.requireAdmin && role !== "admin") {
     return {
       error: { error: "Forbidden: admin key required" },
