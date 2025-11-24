@@ -1,0 +1,16 @@
+node_modules
+dist
+.env
+*.log
+*.sqlite
+*.db
+.DS_Store
+
+# Local lefthook customizations
+.lefthook-local.yml
+
+# Zorter runtime data (if you run inside repo)
+inbox/
+files/
+db/zobox.db
+logs/

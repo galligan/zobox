@@ -1,0 +1,36 @@
+{
+  "name": "zobox",
+  "version": "0.1.0",
+  "description": "Zo-native inbox + sorter + router engine.",
+  "license": "MIT",
+  "bin": {
+    "zobox": "bin/zobox.ts"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/server.ts",
+    "start": "bun run src/server.ts",
+    "prepare": "lefthook install",
+    "format": "biome format --write .",
+    "lint": "biome check .",
+    "check": "biome check --write .",
+    "ci": "biome ci .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.12.0",
+    "hono": "^4.4.0",
+    "toml": "^3.0.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.7",
+    "@types/bun": "^1.3.3",
+    "@types/node": "^22.0.0",
+    "lefthook": "2.0.4",
+    "typescript": "^5.6.0",
+    "ultracite": "6.3.5",
+    "vitest": "^4.0.13"
+  }
+}

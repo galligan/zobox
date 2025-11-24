@@ -1,12 +1,12 @@
-# Zorter
+# Zobox
 
 ---
 
-# Zorter Service Specification
+# Zobox Service Specification
 
-Zorter is a Zo‑native, open‑source inbox + sorter + router engine. It accepts arbitrary structured JSON “items,” optional file attachments, and routes, stores, and transforms them according to a flexible configuration system built around a TOML profile file (`zorter.config.toml`). It is designed to be generic, extensible, and easy for the Zo community to use, fork, and contribute to.
+Zobox is a Zo‑native, open‑source inbox + sorter + router engine. It accepts arbitrary structured JSON messages, optional file attachments, and routes, stores, and transforms them according to a flexible configuration system built around a TOML profile file (`zobox.config.toml`). It is designed to be generic, extensible, and easy for the Zo community to use, fork, and contribute to.
 
-Zorter replaces the earlier “Router API” concept with a more fully realized model: items instead of events, workflows instead of simple routing rules, and type‑driven behavior inspired by Codex CLI profiles.
+Zobox replaces the earlier “Router API” concept with a more fully realized model: messages instead of events, sorters instead of simple routing rules, and type‑driven behavior inspired by Codex CLI profiles.
 
 ---
 
@@ -14,69 +14,69 @@ Zorter replaces the earlier “Router API” concept with a more fully realized 
 
 ### 1.1 Purpose
 
-* Provide a **single ingestion endpoint** for structured JSON items, with or without attachments.
-* Store all incoming items in a **canonical inbox log**, backed by filesystem + SQLite.
+* Provide a **single ingestion endpoint** for structured JSON messages, with or without attachments.
+* Store all incoming messages in a **canonical inbox log**, backed by filesystem + SQLite.
 * Decode and persist file attachments (multipart or base64), routed via **flexible file path templates**.
-* Apply **type‑specific workflows**, enabling powerful behavior without writing code.
+* Apply **type‑specific sorters**, enabling powerful behavior without writing code.
 * Offer a generic, Zo‑installable, open‑source system the community can adapt.
 
 ### 1.2 Philosophy
 
 * **Inbox-first**: everything lands in one place.
-* **Type-defined behavior**: items declare `type`, which determines routing.
-* **Workflow-driven**: types map to workflows specifying how items are handled.
-* **Extensible**: users can define new types, workflows, and directory patterns.
-* **Readable**: all Zorter data is visible in Zo’s file browser.
+* **Type-defined behavior**: messages declare `type`, which determines routing.
+* **sorter-driven**: types map to sorters specifying how messages are handled.
+* **Extensible**: users can define new types, sorters, and directory patterns.
+* **Readable**: all Zobox data is visible in Zo’s file browser.
 * **OSS-friendly**: simple Bun/Hono-based server anyone can run.
 
 ### 1.3 Default base directory
 
-Zorter installs into a configurable base directory, defaulting to:
+Zobox installs into a configurable base directory, defaulting to:
 
 ```
 /home/workspace/Inbox
 ```
 
-Within it, Zorter creates:
+Within it, Zobox creates:
 
 ```
 Inbox/
-  zorter.config.toml
-  inbox/                # item envelopes (JSON)
+  zobox.config.toml
+  inbox/                # message envelopes (JSON)
   files/                # attachments
-  db/zorter.db      # SQLite index
+  db/zobox.db      # SQLite index
   logs/                 # access/error logs
 ```
 
-Everything is adjustable via `zorter.config.toml`.
+Everything is adjustable via `zobox.config.toml`.
 
 ---
 
 ## 2. Core Concepts
 
-### 2.1 Items (formerly "events")
+### 2.1 Messages (formerly "events")
 
-Each ingestion request creates a **Zorter item**. Items are stored as JSON envelopes and indexed in SQLite.
+Each ingestion request creates a **Zobox message**. Messages are stored as JSON envelopes and indexed in SQLite.
 
 ### 2.2 Types
 
-A **type** describes the semantic category of an item. Examples: `update`, `post`, `task`, `note`, `event`. Types live in `[types.*]` sections in `zorter.config.toml`. Types can define:
+A **type** describes the semantic category of a message. Examples: `update`, `post`, `task`, `note`, `event`. Types live in `[types.*]` sections in `zobox.config.toml`. Types can define:
 
 * default channel
 * description
 * example payloads (for agents)
 * any user-defined metadata
 
-### 2.3 Workflows
+### 2.3 sorters
 
-Each type may have an associated **workflow**, defining what to do with items of that type. Workflows live in `[workflows.*]` sections.
+Each type may have an associated **sorter**, defining what to do with messages of that type. Sorters live in `[sorters.*]` sections.
 
-A workflow can specify:
+A sorter can specify:
 
 * where attachments land (`files_path_template`)
 * where metadata should be appended (`append_to_file`)
-* which routing logic to use (`route_profile`)
-* additional behavior for Zorter agents
+* which routing logic to use (`destination`)
+* additional behavior for Zobox agents
 
 ### 2.4 Attachments
 
@@ -85,11 +85,11 @@ Attachments may be provided via:
 * **multipart/form-data** file parts
 * **base64** strings inside JSON
 
-Zorter decodes/stores attachments using a configurable path template.
+Zobox decodes/stores attachments using a configurable path template.
 
-### 2.5 Unified `/items` endpoint
+### 2.5 Unified `/messages` endpoint
 
-One endpoint: `POST /items`.
+One endpoint: `POST /messages`.
 
 Supports three modes:
 
@@ -103,7 +103,7 @@ Graceful, progressive capability.
 
 ## 3. Storage Architecture
 
-Zorter uses a hybrid of **filesystem (canonical)** + **SQLite (index)**.
+Zobox uses a hybrid of **filesystem (canonical)** + **SQLite (index)**.
 
 ### 3.1 Filesystem (source of truth)
 
@@ -118,15 +118,15 @@ The envelope JSON contains the full `payload`, normalized attachment metadata, a
 ### 3.2 SQLite index
 
 ```
-Inbox/db/zorter.db
-Inbox/db/migrations/   # SQL migrations (001_init.sql, etc.)
+Inbox/db/zobox.db
+Inbox/db/migrations/   # SQL migrations (001_init.sql)
 ```
 
-Inbox/db/zorter.db
+Inbox/db/zobox.db
 
 ```
 
-Stores item metadata:
+Stores message metadata:
 
 - id
 - type
@@ -135,28 +135,28 @@ Stores item metadata:
 - filePath (to envelope)
 - fileDir (if attachments exist)
 - attachmentsCount
-- claimedBy/claimedAt
+- subscribedBy/subscribedAt
 
-SQLite is for fast API queries; filesystem is the durable log. Migrations in `db/migrations/` MUST create indexes on `createdAt`, `type`, `channel`, and `hasAttachments`, and may add an optional `summary` column for future UI previews.
+SQLite is for fast API queries; filesystem is the durable log. The single migration in `db/migrations/001_init.sql` creates indexes on `createdAt`, `type`, `channel`, `hasAttachments`, and `tags`, and leaves room for a future `summary` column for UI previews.
 
 ---
 
-## 4. Configuration: `zorter.config.toml`
+## 4. Configuration: `zobox.config.toml`
 
-A TOML file at the base directory root drives Zorter’s behavior.
+A TOML file at the base directory root drives Zobox’s behavior.
 
 ### 4.1 Global structure
 
 ```
 
-[zorter]
+[zobox]
 base_dir = "/home/workspace/Inbox"
-db_path = "/home/workspace/Inbox/db/zorter.db"
+db_path = "/home/workspace/Inbox/db/zobox.db"
 default_channel = "Inbox"
 
 [auth]
-admin_api_key_env_var = "ZORTER_ADMIN_API_KEY"   # full read/write, required for admin ops
-read_api_key_env_var  = "ZORTER_READ_API_KEY"    # optional, read-only access for UIs
+admin_api_key_env_var = "ZOBOX_ADMIN_API_KEY"   # full read/write, required for admin ops
+read_api_key_env_var  = "ZOBOX_READ_API_KEY"    # optional, read-only access for UIs
 required = true
 
 [tools]
@@ -192,19 +192,19 @@ payload_example = """
 }
 """
 
-[workflows.updates]
+[sorters.updates]
 type = "update"
 description = "Append updates to a rolling log."
 files_path_template = "{baseFilesDir}/Updates/{date}/{eventId}/{filename}"
 append_to_file = "/home/workspace/Inbox/updates.md"
-route_profile = "store_only"
+destination = "store_only"
 
-[workflows.posts]
+[sorters.posts]
 type = "post"
 description = "Publish posts to content folder."
 files_path_template = "{baseFilesDir}/Posts/{date}/{eventId}/{filename}"
 append_to_file = "/home/workspace/Inbox/posts_index.md"
-route_profile = "publish_to_worker"
+destination = "publish_to_worker"
 
 ```
 
@@ -228,7 +228,7 @@ route_profile = "publish_to_worker"
 
 ## 5. HTTP API
 
-### 5.1 Ingestion: `POST /items`
+### 5.1 Ingestion: `POST /messages`
 
 Supports three modes:
 
@@ -266,7 +266,7 @@ Content-Type: application/json
 
 ```
 
-Zorter decodes base64 → writes via path template → adds `attachments[]` entries to envelope.
+Zobox decodes base64 → writes via path template → adds `attachments[]` entries to envelope.
 
 #### C. Multipart form
 
@@ -275,14 +275,16 @@ Zorter decodes base64 → writes via path template → adds `attachments[]` entr
 Content-Type: multipart/form-data
 
 (event)  => JSON blob
+(message)  => JSON blob (alternative)
+(json)   => JSON blob (alternative)
 (file)   => binary file
 (file)   => binary file
 
 ````
 
-Zorter merges JSON + file parts into one item.
+Zobox merges JSON + file parts into one message.
 
-### 5.2 Listing: `GET /items`
+### 5.2 Listing: `GET /messages`
 
 Filters via query params:
 
@@ -293,7 +295,7 @@ Filters via query params:
 - `limit`
 - `cursor` (opaque pagination cursor, optional)
 
-Returns a paginated list of items using the SQLite index:
+Returns a paginated list of messages using the SQLite index (response key: `items`):
 
 ```json
 {
@@ -311,21 +313,21 @@ Returns a paginated list of items using the SQLite index:
 }
 ````
 
-`items` here is an **ItemView** projection, not the full envelope; callers can request full details via a separate `GET /items/:id` in a future version or by an `include=full` option when that is implemented.
+`items` here is a **MessageView** projection, not the full envelope; callers can request full details via a separate `GET /messages/:id` in a future version or by an `include=full` option when that is implemented.
 
-### 5.3 Consumer polling: `GET /items/next`
+### 5.3 Subscriber polling: `GET /messages/next`
 
-Workers use this to fetch unclaimed items.
+Workers use this to fetch unclaimed messages.
 
 Parameters:
 
-* `consumer` (required)
+* `subscriber` (required)
 * `type`, `channel`
 * `limit`
 
-### 5.4 Acknowledgement: `POST /items/:id/ack`
+### 5.4 Acknowledgement: `POST /messages/:id/ack`
 
-Marks an item as processed by a consumer.
+Marks a message as processed by a subscriber.
 
 ### 5.5 Health: `GET /health`
 
@@ -333,7 +335,7 @@ Returns `{ "status": "ok" }`.
 
 ### 5.6 Admin config (reserved): `GET /admin/config`, `PUT /admin/config`
 
-Not implemented in V1, but reserved for future UI integrations. These endpoints will expose a structured view of `zorter.config.toml` (for reading) and accept validated updates (for writing), enabling UIs and tools to adjust Zorter configuration without direct file editing.
+Not implemented in V1, but reserved for future UI integrations. These endpoints will expose a structured view of `zobox.config.toml` (for reading) and accept validated updates (for writing), enabling UIs and tools to adjust Zobox configuration without direct file editing.
 
 ### 5.7 Future UI endpoints
 
@@ -343,7 +345,7 @@ Returns `{ "status": "ok" }`.
 
 ## 6. Server Behavior
 
-### 6.1 Item normalization
+### 6.1 Message normalization
 
 Incoming JSON is normalized into:
 
@@ -375,85 +377,85 @@ final_path = path_template
 
 Only create attachment directories when needed.
 
-### 6.3 Workflow application
+### 6.3 sorter application
 
-Zorter:
+Zobox:
 
 1. Looks up `[types.<type>]`.
-2. Looks up `[workflows.<workflow>]` where `workflow.type == item.type`.
+2. Looks up `[sorters.<sorter>]` where `sorter.type == message.type`.
 3. Applies:
 
-   * workflow-specific file path
+   * sorter-specific file path
    * append rules
-   * route profile
+   * destination
 
-### 6.4 Route profiles
+### 6.4 Destinations
 
-Route profiles reference a lower-level `routes.json` file or embedded rules. Examples:
+Destinations reference a lower-level `routes.json` file or embedded rules. Examples:
 
 * `store_only`: no outbound routing
 * `publish_to_worker`: POST JSON envelope to external URL
 
-### 6.5 Envelope vs ItemView
+### 6.5 Envelope vs MessageView
 
-Internally, Zorter distinguishes between:
+Internally, Zobox distinguishes between:
 
 * the **envelope** (full JSON object stored on disk, including `payload`, `attachments`, and `meta`), and
-* the **ItemView** (a lighter-weight projection used for listings and tables: `id`, `type`, `channel`, `createdAt`, `hasAttachments`, `attachmentsCount`, and any computed preview fields).
+* the **MessageView** (a lighter-weight projection used for listings and tables: `id`, `type`, `channel`, `createdAt`, `hasAttachments`, `attachmentsCount`, and any computed preview fields).
 
-`GET /items` returns ItemViews; future endpoints or options (such as `GET /items/:id` or `include=full`) can return the full envelope for a selected item without breaking UI contracts.
+`GET /messages` returns MessageViews; future endpoints or options (such as `GET /messages/:id` or `include=full`) can return the full envelope for a selected item without breaking UI contracts.
 
 ---
 
 ## 7. Repository Layout (OSS)
 
 ```
-zorter/
+zobox/
   src/
     server.ts
     storage.ts
     config.ts
-    workflows.ts
+    sorters.ts
   config/
-    zorter.config.example.toml
+    zobox.config.example.toml
     routes.example.json
   db/
-    zorter.db
+    zobox.db
     migrations/
       001_init.sql
   package.json
   README.md
-  zorter.prompt.md
+  zobox.prompt.md
 ```
 
 ---
 
 ## 8. Zo Integration
 
-Zorter is designed to be installed into a Zo server as a user service.
+Zobox is designed to be installed into a Zo server as a user service.
 
-- `Label: zorter`
+- `Label: zobox`
 - `Type: http`
 - `Local port: 8787` (default)
-- `Entrypoint: bunx zorter start`
+- `Entrypoint: bunx zobox start`
 - `Workdir: /home/workspace/Inbox` (or wherever it was installed)
 
-Zorter can ship with Zo prompts:
+Zobox can ship with Zo prompts:
 
-- **Zorter: New Type**
-- **Zorter: New Workflow**
-- **Zorter: Configure**
-- **Zorter: Add Attachment Rule**
+- **Zobox: New Type**
+- **Zobox: New sorter**
+- **Zobox: Configure**
+- **Zobox: Add Attachment Rule**
 
-These prompts edit `zorter.config.toml` and restart the service.
+These prompts edit `zobox.config.toml` and restart the service.
 
 ---
 
 ## 9. Future Extensions
 
-- Web dashboard for browsing inbox items.
+- Web dashboard for browsing inbox messages.
 - Schema validation via optional JSON Schema blocks.
-- Workflow chaining.
+- sorter chaining.
 - Integration with Convex as projection layer.
 - DSL for building route profiles.
 - Publishing flows (e.g. auto-generate files for iOS apps).
@@ -462,41 +464,41 @@ These prompts edit `zorter.config.toml` and restart the service.
 
 ## 10. Definition of Done (V1)
 
-- Zorter site running on Zo.
-- `/items` ingestion working with all three modes.
+- Zobox site running on Zo.
+- `/messages` ingestion working with all three modes.
 - Attachments routed via path template.
-- `zorter.config.toml` recognized and applied.
-- Types + workflows applied to incoming items.
+- `zobox.config.toml` recognized and applied.
+- Types + sorters applied to incoming messages.
 - SQLite index running.
-- Zorter prompts available for creating/updating types/workflows.
+- Zobox prompts available for creating/updating types/sorters.
 
-Zorter V1 is now a complete, extensible, and branded inbox engine for Zo users.
+Zobox V1 is now a complete, extensible, and branded inbox engine for Zo users.
 
 
 ---
 
-# Zorter Code
+# Zobox Code
 
 ```txt
-zorter/
+zobox/
   package.json
   tsconfig.json
   .gitignore
   README.md
-  zorter.prompt.md
+  zobox.prompt.md
 
   bin/
-    zorter.ts
+    zobox.ts
 
   src/
     types.ts
     config.ts
     storage.ts
-    workflows.ts
+    sorters.ts
     server.ts
 
   config/
-    zorter.config.example.toml
+    zobox.config.example.toml
     routes.example.json
 
   db/
@@ -509,12 +511,12 @@ zorter/
 ```jsonc
 // file: package.json
 {
-  "name": "zorter",
+  "name": "zobox",
   "version": "0.1.0",
   "description": "Zo-native inbox + sorter + router engine.",
   "license": "MIT",
   "bin": {
-    "zorter": "bin/zorter.ts"
+    "zobox": "bin/zobox.ts"
   },
   "type": "module",
   "scripts": {
@@ -570,10 +572,10 @@ dist
 *.db
 .DS_Store
 
-# Zorter runtime data (if you run inside repo)
+# Zobox runtime data (if you run inside repo)
 inbox/
 files/
-db/zorter.db
+db/zobox.db
 logs/
 ```
 
@@ -582,7 +584,7 @@ logs/
 ```ts
 // file: src/types.ts
 
-export interface ZorterSection {
+export interface ZoboxSection {
   base_dir: string;
   db_path: string;
   default_channel: string;
@@ -612,22 +614,22 @@ export interface TypeDefinition {
   [key: string]: unknown;
 }
 
-export interface WorkflowDefinition {
+export interface sorterDefinition {
   type: string;
   description?: string;
   files_path_template?: string;
   append_to_file?: string;
-  route_profile?: string;
+  destination?: string;
   // Arbitrary additional metadata
   [key: string]: unknown;
 }
 
-export interface ZorterConfig {
-  zorter: ZorterSection;
+export interface ZoboxConfig {
+  zobox: ZoboxSection;
   auth: AuthSection;
   files: FilesSection;
   types: Record<string, TypeDefinition>;
-  workflows: Record<string, WorkflowDefinition>;
+  sorters: Record<string, sorterDefinition>;
   tools?: Record<string, unknown>;
 }
 
@@ -657,7 +659,7 @@ export interface AttachmentEnvelope {
   base64?: string;
 }
 
-export interface ItemEnvelope {
+export interface MessageEnvelope {
   id: string;
   type: string;
   source?: string;
@@ -668,7 +670,7 @@ export interface ItemEnvelope {
   createdAt: string;
 }
 
-export interface ItemIndexRow {
+export interface MessageIndexRow {
   id: string;
   type: string;
   channel: string;
@@ -682,7 +684,7 @@ export interface ItemIndexRow {
   summary?: string | null;
 }
 
-export interface ItemView {
+export interface MessageView {
   id: string;
   type: string;
   channel: string;
@@ -691,7 +693,7 @@ export interface ItemView {
   attachmentsCount: number;
 }
 
-export interface ItemFilters {
+export interface MessageFilters {
   type?: string;
   channel?: string;
   since?: string;
@@ -699,15 +701,15 @@ export interface ItemFilters {
 }
 
 export interface QueryItemsResult {
-  items: ItemView[];
+  items: MessageView[];
   nextCursor: string | null;
 }
 
 export interface RoutesConfig {
-  profiles: Record<string, RouteProfile>;
+  destinations: Record<string, Destination>;
 }
 
-export interface RouteProfile {
+export interface Destination {
   kind?: 'http' | 'noop';
   url?: string;
   method?: string;
@@ -717,7 +719,7 @@ export interface RouteProfile {
   description?: string;
 }
 
-export interface NewItemInput {
+export interface NewMessageInput {
   type: string;
   payload: unknown;
   channel?: string;
@@ -741,10 +743,10 @@ export interface AttachmentContext {
 import fs from 'node:fs';
 import path from 'node:path';
 import * as toml from 'toml';
-import type { ZorterConfig, RoutesConfig } from './types';
+import type { ZoboxConfig, RoutesConfig } from './types';
 
-export function loadConfig(baseDir: string): ZorterConfig {
-  const configPath = path.join(baseDir, 'zorter.config.toml');
+export function loadConfig(baseDir: string): ZoboxConfig {
+  const configPath = path.join(baseDir, 'zobox.config.toml');
   let raw: any = {};
   if (fs.existsSync(configPath)) {
     const text = fs.readFileSync(configPath, 'utf8');
@@ -754,19 +756,19 @@ export function loadConfig(baseDir: string): ZorterConfig {
   return normalizeConfig(raw, baseDir);
 }
 
-function normalizeConfig(raw: any, baseDir: string): ZorterConfig {
-  const rawZorter = raw.zorter ?? {};
-  const base_dir: string = rawZorter.base_dir ?? baseDir;
+function normalizeConfig(raw: any, baseDir: string): ZoboxConfig {
+  const rawZobox = raw.zobox ?? {};
+  const base_dir: string = rawZobox.base_dir ?? baseDir;
   const db_path: string =
-    rawZorter.db_path ?? path.join(base_dir, 'db', 'zorter.db');
-  const default_channel: string = rawZorter.default_channel ?? 'Inbox';
+    rawZobox.db_path ?? path.join(base_dir, 'db', 'zobox.db');
+  const default_channel: string = rawZobox.default_channel ?? 'Inbox';
 
   const rawAuth = raw.auth ?? {};
   const auth = {
     admin_api_key_env_var:
-      rawAuth.admin_api_key_env_var ?? 'ZORTER_ADMIN_API_KEY',
+      rawAuth.admin_api_key_env_var ?? 'ZOBOX_ADMIN_API_KEY',
     read_api_key_env_var:
-      rawAuth.read_api_key_env_var ?? 'ZORTER_READ_API_KEY',
+      rawAuth.read_api_key_env_var ?? 'ZOBOX_READ_API_KEY',
     required:
       typeof rawAuth.required === 'boolean' ? rawAuth.required : true,
   };
@@ -794,11 +796,11 @@ function normalizeConfig(raw: any, baseDir: string): ZorterConfig {
   };
 
   const types = raw.types ?? {};
-  const workflows = raw.workflows ?? {};
+  const sorters = raw.sorters ?? {};
   const tools = raw.tools ?? {};
 
-  const config: ZorterConfig = {
-    zorter: {
+  const config: ZoboxConfig = {
+    zobox: {
       base_dir,
       db_path,
       default_channel,
@@ -806,7 +808,7 @@ function normalizeConfig(raw: any, baseDir: string): ZorterConfig {
     auth,
     files,
     types,
-    workflows,
+    sorters,
     tools,
   };
 
@@ -820,8 +822,8 @@ export function loadRoutesConfig(baseDir: string): RoutesConfig | undefined {
   }
   const text = fs.readFileSync(routesPath, 'utf8');
   const raw = JSON.parse(text);
-  if (!raw.profiles || typeof raw.profiles !== 'object') {
-    throw new Error('routes.json must contain a "profiles" object');
+  if (!raw.destinations || typeof raw.destinations !== 'object') {
+    throw new Error('routes.json must contain a "destinations" object');
   }
   return raw as RoutesConfig;
 }
@@ -835,11 +837,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import type {
-  ZorterConfig,
-  ItemEnvelope,
-  ItemIndexRow,
-  ItemView,
-  ItemFilters,
+  ZoboxConfig,
+  MessageEnvelope,
+  MessageIndexRow,
+  MessageView,
+  MessageFilters,
   QueryItemsResult,
 } from './types';
 
@@ -856,10 +858,10 @@ export interface Storage {
   migrationsDir: string;
 }
 
-export function initStorage(config: ZorterConfig): Storage {
-  const baseDir = config.zorter.base_dir || '/home/workspace/Inbox';
+export function initStorage(config: ZoboxConfig): Storage {
+  const baseDir = config.zobox.base_dir || '/home/workspace/Inbox';
   const dbPath =
-    config.zorter.db_path || path.join(baseDir, 'db', 'zorter.db');
+    config.zobox.db_path || path.join(baseDir, 'db', 'zobox.db');
   const dbDir = path.dirname(dbPath);
   const inboxDir = path.join(baseDir, 'inbox');
   const filesDir =
@@ -898,7 +900,7 @@ function ensureInitMigrationFile(migrationsDir: string) {
     const sql = `
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS items (
+CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,
   channel TEXT NOT NULL,
@@ -907,15 +909,17 @@ CREATE TABLE IF NOT EXISTS items (
   file_dir TEXT,
   attachments_count INTEGER NOT NULL DEFAULT 0,
   has_attachments INTEGER NOT NULL DEFAULT 0,
-  claimed_by TEXT,
-  claimed_at TEXT,
-  summary TEXT
+  subscribed_by TEXT,
+  subscribed_at TEXT,
+  summary TEXT,
+  tags TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_items_created_at ON items (created_at);
-CREATE INDEX IF NOT EXISTS idx_items_type ON items (type);
-CREATE INDEX IF NOT EXISTS idx_items_channel ON items (channel);
-CREATE INDEX IF NOT EXISTS idx_items_has_attachments ON items (has_attachments);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages (created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_type ON messages (type);
+CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages (channel);
+CREATE INDEX IF NOT EXISTS idx_messages_has_attachments ON messages (has_attachments);
+CREATE INDEX IF NOT EXISTS idx_messages_tags ON messages (tags);
 `.trimStart();
     fs.writeFileSync(initPath, sql, 'utf8');
   }
@@ -934,7 +938,7 @@ function runMigrations(db: SQLiteDatabase, migrationsDir: string) {
 
 export function writeEnvelope(
   storage: Storage,
-  envelope: ItemEnvelope,
+  envelope: MessageEnvelope,
 ): string {
   const createdDate = envelope.createdAt.slice(0, 10);
   const dir = path.join(storage.inboxDir, createdDate);
@@ -946,13 +950,13 @@ export function writeEnvelope(
   return filePath;
 }
 
-export function insertItemIndex(
+export function insertMessageIndex(
   storage: Storage,
-  index: ItemIndexRow,
+  index: MessageIndexRow,
 ): void {
   const stmt = storage.db.prepare(
     `
-INSERT OR REPLACE INTO items (
+INSERT OR REPLACE INTO messages (
   id,
   type,
   channel,
@@ -961,37 +965,27 @@ INSERT OR REPLACE INTO items (
   file_dir,
   attachments_count,
   has_attachments,
-  claimed_by,
-  claimed_at,
+  subscribed_by,
+  subscribed_at,
   summary
 ) VALUES (
-  @id,
-  @type,
-  @channel,
-  @createdAt,
-  @filePath,
-  @fileDir,
-  @attachmentsCount,
-  @hasAttachments,
-  @claimedBy,
-  @claimedAt,
-  @summary
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 `,
   );
-  stmt.run({
-    id: index.id,
-    type: index.type,
-    channel: index.channel,
-    createdAt: index.createdAt,
-    filePath: index.filePath,
-    fileDir: index.fileDir,
-    attachmentsCount: index.attachmentsCount,
-    hasAttachments: index.hasAttachments ? 1 : 0,
-    claimedBy: index.claimedBy ?? null,
-    claimedAt: index.claimedAt ?? null,
-    summary: index.summary ?? null,
-  });
+  stmt.run(
+    index.id,
+    index.type,
+    index.channel,
+    index.createdAt,
+    index.filePath,
+    index.fileDir,
+    index.attachmentsCount,
+    index.hasAttachments ? 1 : 0,
+    index.subscribedBy ?? null,
+    index.subscribedAt ?? null,
+    index.summary ?? null,
+  );
 }
 
 function encodeCursor(offset: number): string {
@@ -1009,17 +1003,17 @@ function decodeCursor(cursor?: string | null): number {
   }
 }
 
-export function queryItems(
+export function queryMessages(
   storage: Storage,
-  filters: ItemFilters,
+  filters: MessageFilters,
   limit: number,
   cursor?: string | null,
-): QueryItemsResult {
+): QueryMessagesResult {
   const safeLimit = Math.min(Math.max(limit, 1), 100);
   const offset = decodeCursor(cursor);
 
   let sql =
-    'SELECT id, type, channel, created_at, has_attachments, attachments_count FROM items WHERE 1=1';
+    'SELECT id, type, channel, created_at, has_attachments, attachments_count FROM messages WHERE 1=1';
   const params: Record<string, unknown> = {};
 
   if (filters.type) {
@@ -1054,7 +1048,7 @@ export function queryItems(
     attachments_count: number;
   }[];
 
-  const items: ItemView[] = rows.map((row) => ({
+  const items: MessageView[] = rows.map((row) => ({
     id: row.id,
     type: row.type,
     channel: row.channel,
@@ -1070,28 +1064,28 @@ export function queryItems(
   return { items, nextCursor };
 }
 
-export function getItemEnvelope(
+export function getMessageEnvelope(
   storage: Storage,
   id: string,
-): ItemEnvelope | null {
+): MessageEnvelope | null {
   const stmt = storage.db.prepare(
-    'SELECT file_path FROM items WHERE id = @id',
+    'SELECT file_path FROM messages WHERE id = @id',
   );
   const row = stmt.get({ id }) as { file_path: string } | undefined;
   if (!row) return null;
   const text = fs.readFileSync(row.file_path, 'utf8');
-  return JSON.parse(text) as ItemEnvelope;
+  return JSON.parse(text) as MessageEnvelope;
 }
 
-export function findUnclaimedItems(
+export function findUnclaimedMessages(
   storage: Storage,
-  filters: ItemFilters,
+  filters: MessageFilters,
   limit: number,
-): ItemEnvelope[] {
+): MessageEnvelope[] {
   const safeLimit = Math.min(Math.max(limit, 1), 50);
 
   let sql =
-    'SELECT id, file_path FROM items WHERE claimed_by IS NULL';
+    'SELECT id, file_path FROM messages WHERE subscribed_by IS NULL';
   const params: Record<string, unknown> = {};
 
   if (filters.type) {
@@ -1113,30 +1107,30 @@ export function findUnclaimedItems(
     file_path: string;
   }[];
 
-  const items: ItemEnvelope[] = [];
+  const items: MessageEnvelope[] = [];
   for (const row of rows) {
     const text = fs.readFileSync(row.file_path, 'utf8');
-    items.push(JSON.parse(text) as ItemEnvelope);
+    items.push(JSON.parse(text) as MessageEnvelope);
   }
   return items;
 }
 
-export function ackItem(
+export function ackMessage(
   storage: Storage,
   id: string,
-  consumer: string,
+  subscriber: string,
 ): boolean {
   const now = new Date().toISOString();
   const stmt = storage.db.prepare(
     `
-UPDATE items
-SET claimed_by = @consumer,
-    claimed_at = @claimedAt
+UPDATE messages
+SET subscribed_by = @subscriber,
+    subscribed_at = @claimedAt
 WHERE id = @id
-  AND (claimed_by IS NULL OR claimed_by = @consumer)
+  AND (subscribed_by IS NULL OR subscribed_by = @subscriber)
 `,
   );
-  const result = stmt.run({ id, consumer, claimedAt: now });
+  const result = stmt.run({ id, subscriber, claimedAt: now });
   return result.changes > 0;
 }
 ```
@@ -1144,25 +1138,25 @@ WHERE id = @id
 ---
 
 ```ts
-// file: src/workflows.ts
+// file: src/sorters.ts
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import type {
-  ZorterConfig,
-  WorkflowDefinition,
+  ZoboxConfig,
+  sorterDefinition,
   AttachmentInput,
   AttachmentContext,
   AttachmentEnvelope,
   RoutesConfig,
-  ItemEnvelope,
+  MessageEnvelope,
   FilenameStrategy,
 } from './types';
 import type { Storage } from './storage';
 
-export interface WorkflowBinding {
+export interface sorterBinding {
   name: string;
-  definition: WorkflowDefinition;
+  definition: sorterDefinition;
 }
 
 export interface ProcessAttachmentsResult {
@@ -1171,7 +1165,7 @@ export interface ProcessAttachmentsResult {
 }
 
 export function resolveChannel(
-  config: ZorterConfig,
+  config: ZoboxConfig,
   itemType: string,
   explicitChannel?: string | null,
 ): string {
@@ -1182,14 +1176,14 @@ export function resolveChannel(
   if (typeDef?.channel) {
     return String(typeDef.channel);
   }
-  return config.zorter.default_channel;
+  return config.zobox.default_channel;
 }
 
-export function getWorkflowForType(
-  config: ZorterConfig,
+export function getsorterForType(
+  config: ZoboxConfig,
   type: string,
-): WorkflowBinding | null {
-  for (const [name, wf] of Object.entries(config.workflows)) {
+): sorterBinding | null {
+  for (const [name, wf] of Object.entries(config.sorters)) {
     if (wf && typeof wf.type === 'string' && wf.type === type) {
       return { name, definition: wf };
     }
@@ -1198,11 +1192,11 @@ export function getWorkflowForType(
 }
 
 export function processAttachments(
-  config: ZorterConfig,
+  config: ZoboxConfig,
   storage: Storage,
   ctx: AttachmentContext,
   inputs: AttachmentInput[],
-  workflowBinding?: WorkflowBinding | null,
+  sorterBinding?: sorterBinding | null,
 ): ProcessAttachmentsResult {
   if (!inputs.length || !config.files.enabled) {
     return { attachments: [], attachmentsDir: null };
@@ -1211,7 +1205,7 @@ export function processAttachments(
   const baseFilesDir =
     config.files.base_files_dir || storage.filesDir;
   const template =
-    workflowBinding?.definition.files_path_template ??
+    sorterBinding?.definition.files_path_template ??
     config.files.path_template;
   const keepBase64 = !!config.files.keep_base64_in_envelope;
 
@@ -1346,7 +1340,7 @@ function renderPathTemplate(
   return result;
 }
 
-function buildAppendEntry(envelope: ItemEnvelope): string {
+function buildAppendEntry(envelope: MessageEnvelope): string {
   const createdAt = envelope.createdAt;
   const preview = buildPayloadPreview(envelope.payload);
   return `- [${createdAt}] (${envelope.type}) ${preview} (id: ${envelope.id})\n`;
@@ -1379,7 +1373,7 @@ function buildPayloadPreview(payload: unknown): string {
 
 function appendToFile(
   target: string,
-  envelope: ItemEnvelope,
+  envelope: MessageEnvelope,
   baseDir: string,
 ) {
   const filePath = path.isAbsolute(target)
@@ -1395,14 +1389,14 @@ function appendToFile(
 
 async function routeItem(
   profileName: string,
-  envelope: ItemEnvelope,
+  envelope: MessageEnvelope,
   routesConfig?: RoutesConfig,
 ): Promise<void> {
   if (!profileName || profileName === 'store_only') return;
 
   if (!routesConfig) {
     console.warn(
-      `[zorter] route profile "${profileName}" requested but no routes.json loaded`,
+      `[zobox] route profile "${profileName}" requested but no routes.json loaded`,
     );
     return;
   }
@@ -1410,14 +1404,14 @@ async function routeItem(
   const profile = routesConfig.profiles[profileName];
   if (!profile) {
     console.warn(
-      `[zorter] route profile "${profileName}" not found in routes.json`,
+      `[zobox] route profile "${profileName}" not found in routes.json`,
     );
     return;
   }
   if (profile.enabled === false) return;
   if ((profile.kind && profile.kind !== 'http') || !profile.url) {
     console.warn(
-      `[zorter] route profile "${profileName}" is not an HTTP profile or missing url`,
+      `[zobox] route profile "${profileName}" is not an HTTP profile or missing url`,
     );
     return;
   }
@@ -1436,40 +1430,40 @@ async function routeItem(
     });
     if (!res.ok) {
       console.warn(
-        `[zorter] route "${profileName}" HTTP ${res.status} when sending to ${profile.url}`,
+        `[zobox] route "${profileName}" HTTP ${res.status} when sending to ${profile.url}`,
       );
     }
   } catch (err) {
     console.error(
-      `[zorter] route "${profileName}" failed:`,
+      `[zobox] route "${profileName}" failed:`,
       err instanceof Error ? err.message : err,
     );
   }
 }
 
-export async function applyWorkflowSideEffects(
-  workflowBinding: WorkflowBinding | null,
-  envelope: ItemEnvelope,
+export async function applysortersideEffects(
+  sorterBinding: sorterBinding | null,
+  envelope: MessageEnvelope,
   storage: Storage,
   routesConfig?: RoutesConfig,
 ): Promise<void> {
-  if (!workflowBinding) return;
+  if (!sorterBinding) return;
 
-  const wf = workflowBinding.definition;
+  const wf = sorterBinding.definition;
 
   if (wf.append_to_file) {
     try {
       appendToFile(wf.append_to_file, envelope, storage.baseDir);
     } catch (err) {
       console.error(
-        `[zorter] Failed to append to ${wf.append_to_file}:`,
+        `[zobox] Failed to append to ${wf.append_to_file}:`,
         err instanceof Error ? err.message : err,
       );
     }
   }
 
-  if (wf.route_profile) {
-    await routeItem(wf.route_profile, envelope, routesConfig);
+  if (wf.destination) {
+    await routeMessage(wf.destination, envelope, routesConfig);
   }
 }
 ```
@@ -1486,29 +1480,29 @@ import {
   initStorage,
   writeEnvelope,
   insertItemIndex,
-  queryItems,
-  findUnclaimedItems,
-  ackItem,
+  queryMessages,
+  findUnclaimedMessages,
+  ackMessage,
 } from './storage.js';
 import {
   resolveChannel,
-  getWorkflowForType,
+  getsorterForType,
   processAttachments,
-  applyWorkflowSideEffects,
-} from './workflows.js';
+  applysortersideEffects,
+} from './sorters.js';
 import type {
-  ZorterConfig,
+  ZoboxConfig,
   RoutesConfig,
   NewItemInput,
   AttachmentInput,
-  ItemEnvelope,
-  ItemFilters,
-  ItemIndexRow,
+  MessageEnvelope,
+  MessageFilters,
+  MessageIndexRow,
 } from './types.js';
 import type { Storage } from './storage.js';
 
 interface RuntimeContext {
-  config: ZorterConfig;
+  config: ZoboxConfig;
   storage: Storage;
   routes?: RoutesConfig;
 }
@@ -1525,11 +1519,11 @@ export async function startServer(options?: {
 }): Promise<void> {
   const baseDir =
     options?.baseDir ||
-    process.env.ZORTER_BASE_DIR ||
+    process.env.ZOBOX_BASE_DIR ||
     '/home/workspace/Inbox';
   const port = options?.port
     ? options.port
-    : Number.parseInt(process.env.ZORTER_PORT ?? '8787', 10);
+    : Number.parseInt(process.env.ZOBOX_PORT ?? '8787', 10);
 
   const config = loadConfig(baseDir);
   const storage = initStorage(config);
@@ -1551,7 +1545,7 @@ export async function startServer(options?: {
 
   app.get('/health', (c) => c.json({ status: 'ok' }));
 
-  app.post('/items', async (c) => {
+  app.post('/messages', async (c) => {
     const runtimeCtx = c.get('runtime');
     const auth = authenticate(c, runtimeCtx.config, {
       requireAdmin: true,
@@ -1562,7 +1556,7 @@ export async function startServer(options?: {
 
     const contentType = (c.req.header('content-type') || '').toLowerCase();
     const attachments: AttachmentInput[] = [];
-    let item: NewItemInput;
+    let message: NewMessageInput;
 
     try {
       if (contentType.includes('multipart/form-data')) {
@@ -1573,7 +1567,7 @@ export async function startServer(options?: {
 
         const eventRaw =
           (body['event'] as string | undefined) ??
-          (body['item'] as string | undefined) ??
+          (body['message'] as string | undefined) ??
           (body['json'] as string | undefined);
 
         if (!eventRaw) {
@@ -1593,7 +1587,7 @@ export async function startServer(options?: {
           return c.json({ error: 'Invalid JSON in "event" field' }, 400);
         }
 
-        item = normalizeNewItemInput(parsed);
+        message = normalizeNewMessageInput(parsed);
 
         for (const [key, value] of Object.entries(body)) {
           const v: any = value;
@@ -1621,7 +1615,7 @@ export async function startServer(options?: {
           return c.json({ error: 'Invalid JSON body' }, 400);
         }
 
-        item = normalizeNewItemInput(raw);
+        message = normalizeNewMessageInput(raw);
 
         if (Array.isArray(raw.attachments)) {
           for (const att of raw.attachments as any[]) {
@@ -1636,7 +1630,7 @@ export async function startServer(options?: {
         }
       }
     } catch (err) {
-      console.error('[zorter] error parsing /items request', err);
+      console.error('[zobox] error parsing /messages request', err);
       return c.json({ error: 'Failed to parse request' }, 400);
     }
 
@@ -1647,27 +1641,27 @@ export async function startServer(options?: {
 
     const channel = resolveChannel(
       runtimeCtx.config,
-      item.type,
-      item.channel,
+      message.type,
+      message.channel,
     );
-    const workflowBinding = getWorkflowForType(
+    const sorterBinding = getsorterForType(
       runtimeCtx.config,
-      item.type,
+      message.type,
     );
 
     let processedAttachments: {
       attachments: AttachmentInput[];
       attachmentsDir: string | null;
-      normalizedAttachments: ItemEnvelope['attachments'];
+      normalizedAttachments: MessageEnvelope['attachments'];
     };
 
     try {
       const { attachments: normalized, attachmentsDir } = processAttachments(
         runtimeCtx.config,
         runtimeCtx.storage,
-        { id, type: item.type, channel, createdAt, date },
+        { id, type: message.type, channel, createdAt, date },
         attachments,
-        workflowBinding,
+        sorterBinding,
       );
 
       processedAttachments = {
@@ -1677,7 +1671,7 @@ export async function startServer(options?: {
       };
     } catch (err) {
       console.error(
-        '[zorter] error processing attachments',
+        '[zobox] error processing attachments',
         err,
       );
       return c.json(
@@ -1686,20 +1680,20 @@ export async function startServer(options?: {
       );
     }
 
-    const envelope: ItemEnvelope = {
+    const envelope: MessageEnvelope = {
       id,
-      type: item.type,
-      source: item.source ?? 'api',
+      type: message.type,
+      source: message.source ?? 'api',
       channel,
-      payload: item.payload,
+      payload: message.payload,
       attachments: processedAttachments.normalizedAttachments,
-      meta: item.meta,
+      meta: message.meta,
       createdAt,
     };
 
     const filePath = writeEnvelope(runtimeCtx.storage, envelope);
 
-    const index: ItemIndexRow = {
+    const index: MessageIndexRow = {
       id,
       type: envelope.type,
       channel: envelope.channel,
@@ -1715,8 +1709,8 @@ export async function startServer(options?: {
 
     insertItemIndex(runtimeCtx.storage, index);
 
-    await applyWorkflowSideEffects(
-      workflowBinding,
+    await applysortersideEffects(
+      sorterBinding,
       envelope,
       runtimeCtx.storage,
       runtimeCtx.routes,
@@ -1724,7 +1718,7 @@ export async function startServer(options?: {
 
     return c.json(
       {
-        item: {
+        message: {
           id,
           type: envelope.type,
           channel: envelope.channel,
@@ -1737,7 +1731,7 @@ export async function startServer(options?: {
     );
   });
 
-  app.get('/items', (c) => {
+  app.get('/messages', (c) => {
     const runtimeCtx = c.get('runtime');
     const auth = authenticate(c, runtimeCtx.config);
     if ('error' in auth) {
@@ -1745,7 +1739,7 @@ export async function startServer(options?: {
     }
 
     const query = c.req.query();
-    const filters: ItemFilters = {
+    const filters: MessageFilters = {
       type: query.type,
       channel: query.channel,
       since: query.since,
@@ -1757,11 +1751,11 @@ export async function startServer(options?: {
       : 50;
     const cursor = query.cursor || undefined;
 
-    const result = queryItems(runtimeCtx.storage, filters, limit, cursor);
+    const result = queryMessages(runtimeCtx.storage, filters, limit, cursor);
     return c.json(result);
   });
 
-  app.get('/items/next', (c) => {
+  app.get('/messages/next', (c) => {
     const runtimeCtx = c.get('runtime');
     const auth = authenticate(c, runtimeCtx.config);
     if ('error' in auth) {
@@ -1769,10 +1763,10 @@ export async function startServer(options?: {
     }
 
     const query = c.req.query();
-    const consumer = query.consumer;
-    if (!consumer) {
+    const subscriber = query.subscriber;
+    if (!subscriber) {
       return c.json(
-        { error: '"consumer" query parameter is required' },
+        { error: '"subscriber" query parameter is required' },
         400,
       );
     }
@@ -1780,12 +1774,12 @@ export async function startServer(options?: {
     const limit = query.limit
       ? Number.parseInt(query.limit, 10)
       : 10;
-    const filters: ItemFilters = {
+    const filters: MessageFilters = {
       type: query.type,
       channel: query.channel,
     };
 
-    const items = findUnclaimedItems(
+    const items = findUnclaimedMessages(
       runtimeCtx.storage,
       filters,
       limit,
@@ -1793,7 +1787,7 @@ export async function startServer(options?: {
     return c.json({ items });
   });
 
-  app.post('/items/:id/ack', async (c) => {
+  app.post('/messages/:id/ack', async (c) => {
     const runtimeCtx = c.get('runtime');
     const auth = authenticate(c, runtimeCtx.config, {
       requireAdmin: true,
@@ -1803,46 +1797,46 @@ export async function startServer(options?: {
     }
 
     const id = c.req.param('id');
-    let consumer: string | undefined;
+    let subscriber: string | undefined;
 
     try {
       const body = (await c.req
         .json()
         .catch(() => ({}))) as any;
-      if (body && typeof body.consumer === 'string') {
-        consumer = body.consumer;
+      if (body && typeof body.subscriber === 'string') {
+        subscriber = body.subscriber;
       }
     } catch {
       // ignore body parse errors, handled below
     }
 
-    const qConsumer = c.req.query('consumer');
-    if (!consumer && qConsumer) {
-      consumer = qConsumer;
+    const qSubscriber = c.req.query('subscriber');
+    if (!subscriber && qSubscriber) {
+      subscriber = qSubscriber;
     }
 
-    if (!consumer) {
+    if (!subscriber) {
       return c.json(
         {
           error:
-            '"consumer" must be provided in body or query string',
+            '"subscriber" must be provided in body or query string',
         },
         400,
       );
     }
 
-    const ok = ackItem(runtimeCtx.storage, id, consumer);
+    const ok = ackMessage(runtimeCtx.storage, id, subscriber);
     if (!ok) {
       return c.json(
         {
           error:
-            'Item not found or already claimed by another consumer',
+            'Message not found or already claimed by another subscriber',
         },
         409,
       );
     }
 
-    return c.json({ status: 'ok', id, consumer });
+    return c.json({ status: 'ok', id, subscriber });
   });
 
   // Reserved admin config endpoints (V1: not implemented)
@@ -1869,7 +1863,7 @@ export async function startServer(options?: {
   );
 
   console.log(
-    `[zorter] Listening on http://localhost:${port} (baseDir=${runtime.storage.baseDir})`,
+    `[zobox] Listening on http://localhost:${port} (baseDir=${runtime.storage.baseDir})`,
   );
 
   // Bun and Node both support this
@@ -1879,9 +1873,9 @@ export async function startServer(options?: {
   });
 }
 
-function normalizeNewItemInput(raw: any): NewItemInput {
+function normalizeNewMessageInput(raw: any): NewMessageInput {
   if (!raw || typeof raw !== 'object') {
-    throw new Error('Invalid item body');
+    throw new Error('Invalid message body');
   }
   const type = String(raw.type ?? '').trim();
   if (!type) {
@@ -1907,7 +1901,7 @@ function extractBearerToken(
 
 function authenticate(
   c: Hono.Context<AppEnv>,
-  config: ZorterConfig,
+  config: ZoboxConfig,
   opts: { requireAdmin?: boolean; requireAuthForPublic?: boolean } = {},
 ):
   | { role: 'admin' | 'read' | 'public' }
@@ -1959,7 +1953,7 @@ function authenticate(
 ---
 
 ```ts
-// file: bin/zorter.ts
+// file: bin/zobox.ts
 #!/usr/bin/env bun
 import { startServer } from '../src/server.js';
 import { loadConfig } from '../src/config.js';
@@ -1967,22 +1961,22 @@ import { initStorage } from '../src/storage.js';
 
 function printHelp() {
   console.log(`
-zorter - Zo-native inbox + sorter + router
+zobox - Zo-native inbox + sorter + router
 
 Usage:
-  zorter start [--base-dir PATH] [--port PORT]
-  zorter migrate [--base-dir PATH]
-  zorter help
+  zobox start [--base-dir PATH] [--port PORT]
+  zobox migrate [--base-dir PATH]
+  zobox help
 
 Environment:
-  ZORTER_BASE_DIR   Base directory for inbox (default: /home/workspace/Inbox)
-  ZORTER_PORT       Port to listen on (default: 8787)
+  ZOBOX_BASE_DIR   Base directory for inbox (default: /home/workspace/Inbox)
+  ZOBOX_PORT       Port to listen on (default: 8787)
 
 For Zo, configure a User Service with:
-  Label: zorter
+  Label: zobox
   Type: http
   Local port: 8787
-  Entrypoint: bunx zorter start
+  Entrypoint: bunx zobox start
   Workdir: /home/workspace/Inbox
 `);
 }
@@ -1993,9 +1987,9 @@ async function main() {
   const args = argv.slice(1);
 
   let baseDir =
-    process.env.ZORTER_BASE_DIR || '/home/workspace/Inbox';
+    process.env.ZOBOX_BASE_DIR || '/home/workspace/Inbox';
   let port = Number.parseInt(
-    process.env.ZORTER_PORT ?? '8787',
+    process.env.ZOBOX_PORT ?? '8787',
     10,
   );
 
@@ -2026,7 +2020,7 @@ async function main() {
     case 'migrate': {
       const config = loadConfig(baseDir);
       initStorage(config); // runs migrations as a side-effect
-      console.log('[zorter] migrations applied');
+      console.log('[zobox] migrations applied');
       break;
     }
     case 'help':
@@ -2036,7 +2030,7 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[zorter] fatal error', err);
+  console.error('[zobox] fatal error', err);
   process.exit(1);
 });
 ```
@@ -2044,16 +2038,16 @@ main().catch((err) => {
 ---
 
 ```toml
-# file: config/zorter.config.example.toml
+# file: config/zobox.config.example.toml
 
-[zorter]
+[zobox]
 base_dir = "/home/workspace/Inbox"
-db_path = "/home/workspace/Inbox/db/zorter.db"
+db_path = "/home/workspace/Inbox/db/zobox.db"
 default_channel = "Inbox"
 
 [auth]
-admin_api_key_env_var = "ZORTER_ADMIN_API_KEY" # full read/write
-read_api_key_env_var  = "ZORTER_READ_API_KEY"  # optional read-only
+admin_api_key_env_var = "ZOBOX_ADMIN_API_KEY" # full read/write
+read_api_key_env_var  = "ZOBOX_READ_API_KEY"  # optional read-only
 required = true
 
 [files]
@@ -2085,19 +2079,19 @@ payload_example = """
 }
 """
 
-[workflows.updates]
+[sorters.updates]
 type = "update"
 description = "Append updates to a rolling log."
 files_path_template = "{baseFilesDir}/Updates/{date}/{eventId}/{filename}"
 append_to_file = "/home/workspace/Inbox/updates.md"
-route_profile = "store_only"
+destination = "store_only"
 
-[workflows.posts]
+[sorters.posts]
 type = "post"
 description = "Publish posts to content folder."
 files_path_template = "{baseFilesDir}/Posts/{date}/{eventId}/{filename}"
 append_to_file = "/home/workspace/Inbox/posts_index.md"
-route_profile = "publish_to_worker"
+destination = "publish_to_worker"
 ```
 
 ---
@@ -2105,16 +2099,16 @@ route_profile = "publish_to_worker"
 ```json
 // file: config/routes.example.json
 {
-  "$schema": "https://galligan.dev/zorter/routes.schema.json",
-  "profiles": {
+  "$schema": "https://galligan.dev/zobox/routes.schema.json",
+  "destinations": {
     "store_only": {
       "kind": "noop",
-      "description": "Do nothing, keep item in local inbox."
+      "description": "Do nothing, keep message in local inbox."
     },
     "publish_to_worker": {
       "kind": "http",
-      "description": "POST the full item envelope to a worker service.",
-      "url": "http://localhost:9000/zorter/items",
+      "description": "POST the full message envelope to a worker service.",
+      "url": "http://localhost:9000/zobox/messages",
       "method": "POST",
       "headers": {
         "content-type": "application/json"
@@ -2132,7 +2126,7 @@ route_profile = "publish_to_worker"
 -- file: db/migrations/001_init.sql
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS items (
+CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,
   channel TEXT NOT NULL,
@@ -2141,15 +2135,44 @@ CREATE TABLE IF NOT EXISTS items (
   file_dir TEXT,
   attachments_count INTEGER NOT NULL DEFAULT 0,
   has_attachments INTEGER NOT NULL DEFAULT 0,
-  claimed_by TEXT,
-  claimed_at TEXT,
-  summary TEXT
+  subscribed_by TEXT,
+  subscribed_at TEXT,
+  summary TEXT,
+  tags TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_items_created_at ON items (created_at);
-CREATE INDEX IF NOT EXISTS idx_items_type ON items (type);
-CREATE INDEX IF NOT EXISTS idx_items_channel ON items (channel);
-CREATE INDEX IF NOT EXISTS idx_items_has_attachments ON items (has_attachments);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages (created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_type ON messages (type);
+CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages (channel);
+CREATE INDEX IF NOT EXISTS idx_messages_has_attachments ON messages (has_attachments);
+CREATE INDEX IF NOT EXISTS idx_messages_tags ON messages (tags);
+
+CREATE TABLE IF NOT EXISTS tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  description TEXT,
+  color TEXT,
+  created_at TEXT NOT NULL,
+  created_by TEXT DEFAULT 'system',
+  metadata TEXT
+);
+
+CREATE TABLE IF NOT EXISTS message_tags (
+  message_id TEXT NOT NULL,
+  tag_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  added_by TEXT DEFAULT 'system',
+  source TEXT DEFAULT 'user',
+  metadata TEXT,
+  PRIMARY KEY (message_id, tag_id),
+  FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_message_tags_message_id ON message_tags(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_tags_tag_id ON message_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_message_tags_source ON message_tags(source);
 ```
 
 ---
@@ -2157,14 +2180,14 @@ CREATE INDEX IF NOT EXISTS idx_items_has_attachments ON items (has_attachments);
 ````md
 <!-- file: README.md -->
 
-# zorter
+# zobox
 
-Zorter is a Zo‑native, open‑source inbox + sorter + router engine.
+Zobox is a Zo‑native, open‑source inbox + sorter + router engine.
 
-- Single ingestion endpoint: `POST /items`
+- Single ingestion endpoint: `POST /messages`
 - Filesystem is the source of truth (`inbox/` + `files/`)
 - SQLite index for fast listing & worker polling
-- Types + workflows driven by `zorter.config.toml`
+- Types + sorters driven by `zobox.config.toml`
 - Bun/Hono server, easy to run as a Zo User Service
 
 ## Install
@@ -2176,67 +2199,67 @@ bun install
 Or with npm:
 
 ```bash
-npm install zorter
+npm install zobox
 ```
 
 ## Quick start (local)
 
 ```bash
-export ZORTER_ADMIN_API_KEY="dev-admin-key"
-export ZORTER_READ_API_KEY="dev-read-key"
+export ZOBOX_ADMIN_API_KEY="dev-admin-key"
+export ZOBOX_READ_API_KEY="dev-read-key"
 
 # set up base dir (matches defaults)
 mkdir -p /home/workspace/Inbox
-cp config/zorter.config.example.toml /home/workspace/Inbox/zorter.config.toml
+cp config/zobox.config.example.toml /home/workspace/Inbox/zobox.config.toml
 mkdir -p /home/workspace/Inbox/db/migrations
 cp db/migrations/001_init.sql /home/workspace/Inbox/db/migrations/001_init.sql
 
-ZORTER_BASE_DIR=/home/workspace/Inbox bun run src/server.ts
+ZOBOX_BASE_DIR=/home/workspace/Inbox bun run src/server.ts
 ```
 
 Then:
 
 ```bash
-curl -X POST "http://localhost:8787/items" \
+curl -X POST "http://localhost:8787/messages" \
   -H "content-type: application/json" \
-  -H "x-api-key: $ZORTER_ADMIN_API_KEY" \
+  -H "x-api-key: $ZOBOX_ADMIN_API_KEY" \
   -d '{
     "type": "update",
     "payload": { "text": "First idea" }
   }'
 ```
 
-List items:
+List messages:
 
 ```bash
-curl "http://localhost:8787/items?limit=20" \
-  -H "x-api-key: $ZORTER_READ_API_KEY"
+curl "http://localhost:8787/messages?limit=20" \
+  -H "x-api-key: $ZOBOX_READ_API_KEY"
 ```
 
 ## Zo integration
 
 Create a User Service in Zo:
 
-* **Label**: `zorter`
+* **Label**: `zobox`
 * **Type**: `http`
 * **Local port**: `8787`
-* **Entrypoint**: `bunx zorter start`
+* **Entrypoint**: `bunx zobox start`
 * **Workdir**: `/home/workspace/Inbox`
 
 Copy:
 
-* `config/zorter.config.example.toml` → `/home/workspace/Inbox/zorter.config.toml`
+* `config/zobox.config.example.toml` → `/home/workspace/Inbox/zobox.config.toml`
 * `db/migrations/001_init.sql` → `/home/workspace/Inbox/db/migrations/001_init.sql`
 
 Set environment variables on the service:
 
-* `ZORTER_ADMIN_API_KEY`
-* `ZORTER_READ_API_KEY` (optional)
-* `ZORTER_BASE_DIR=/home/workspace/Inbox`
+* `ZOBOX_ADMIN_API_KEY`
+* `ZOBOX_READ_API_KEY` (optional)
+* `ZOBOX_BASE_DIR=/home/workspace/Inbox`
 
 ## HTTP API
 
-### `POST /items`
+### `POST /messages`
 
 Supports:
 
@@ -2248,7 +2271,7 @@ Supports:
   * `event` field: JSON blob
   * file fields: binary file parts
 
-Returns an `ItemView` projection:
+Returns an `MessageView` projection:
 
 ```json
 {
@@ -2265,7 +2288,7 @@ Returns an `ItemView` projection:
 
 Requires admin API key.
 
-### `GET /items`
+### `GET /messages`
 
 Query params:
 
@@ -2293,13 +2316,13 @@ Response:
 }
 ```
 
-### `GET /items/next`
+### `GET /messages/next`
 
-Worker polling for unclaimed items.
+Worker polling for unclaimed messages.
 
 Query params:
 
-* `consumer` (required)
+* `subscriber` (required)
 * `type`
 * `channel`
 * `limit` (default 10, max 50)
@@ -2321,19 +2344,19 @@ Returns an array of full envelopes:
 }
 ```
 
-Note: items are considered “unclaimed” until a worker `POST`s `/items/:id/ack`.
+Note: messages are considered “unclaimed” until a worker `POST`s `/messages/:id/ack`.
 
-### `POST /items/:id/ack`
+### `POST /messages/:id/ack`
 
-Marks an item as processed by a `consumer`.
+Marks an item as processed by a `subscriber`.
 
 * Path param: `id`
-* Body or query: `{ "consumer": "worker-name" }`
+* Body or query: `{ "subscriber": "worker-name" }`
 
 Returns:
 
 ```json
-{ "status": "ok", "id": "…", "consumer": "worker-name" }
+{ "status": "ok", "id": "…", "subscriber": "worker-name" }
 ```
 
 ### `GET /health`
@@ -2349,30 +2372,30 @@ Simple health check:
 * Header: `x-api-key: YOUR_KEY`
 * Or: `authorization: Bearer YOUR_KEY`
 
-`zorter.config.toml` tells Zorter which env vars to read:
+`zobox.config.toml` tells Zobox which env vars to read:
 
 ```toml
 [auth]
-admin_api_key_env_var = "ZORTER_ADMIN_API_KEY"
-read_api_key_env_var  = "ZORTER_READ_API_KEY"
+admin_api_key_env_var = "ZOBOX_ADMIN_API_KEY"
+read_api_key_env_var  = "ZOBOX_READ_API_KEY"
 required = true
 ```
 
 Admin key is required for ingest and ack; read key can be used for listing and polling.
 
-## Workflows & routes
+## sorters & routes
 
-Workflows are configured in `zorter.config.toml`:
+sorters are configured in `zobox.config.toml`:
 
 ```toml
-[workflows.posts]
+[sorters.posts]
 type = "post"
 files_path_template = "{baseFilesDir}/Posts/{date}/{eventId}/{filename}"
 append_to_file = "/home/workspace/Inbox/posts_index.md"
-route_profile = "publish_to_worker"
+destination = "publish_to_worker"
 ```
 
-Route profiles are declared in `routes.json` (runtime) using the schema illustrated in `config/routes.example.json`.
+Destinations are declared in `routes.json` (runtime) using the schema illustrated in `config/routes.example.json`.
 
 * `store_only` → no outbound routing
 * `publish_to_worker` → POST envelope to external worker
@@ -2385,31 +2408,32 @@ Given `base_dir = "/home/workspace/Inbox"`:
 
 * Envelopes: `/home/workspace/Inbox/inbox/YYYY-MM-DD/<id>.json`
 * Attachments: path templates (defaults to `{baseFilesDir}/{channel}/{date}/{eventId}/{filename}`)
-* SQLite: `/home/workspace/Inbox/db/zorter.db`
+* SQLite: `/home/workspace/Inbox/db/zobox.db`
 * Logs (for future use): `/home/workspace/Inbox/logs/`
 
-SQLite table: `items` with columns:
+SQLite table: `messages` with columns:
 
 * `id`, `type`, `channel`, `created_at`
 * `file_path`, `file_dir`
 * `attachments_count`, `has_attachments`
-* `claimed_by`, `claimed_at`
+* `subscribed_by`, `subscribed_at`
 * `summary` (reserved for future previews)
+* `tags` (JSON string)
 
 ````
 
 ---
 
 ```md
-<!-- file: zorter.prompt.md -->
+<!-- file: zobox.prompt.md -->
 
-# Zorter: Configure
+# Zobox: Configure
 
-You are configuring the Zorter inbox + sorter + router engine that runs as a User Service on my Zo.
+You are configuring the Zobox inbox + sorter + router engine that runs as a User Service on my Zo.
 
-Zorter is driven by a TOML config file at:
+Zobox is driven by a TOML config file at:
 
-- `/home/workspace/Inbox/zorter.config.toml`
+- `/home/workspace/Inbox/zobox.config.toml`
 
 and optional routing config:
 
@@ -2419,7 +2443,7 @@ and optional routing config:
 
 - What I want to do:
   - Add or update a **type**
-  - Add or update a **workflow**
+  - Add or update a **sorter**
   - Change global settings (base_dir, auth, files)
   - Add or update a **route profile**
 
@@ -2427,23 +2451,23 @@ and optional routing config:
 
 1. **Understand the intent**
 
-   - Ask me *once* what I want to change in Zorter (type, workflow, files, auth, or routes).
+   - Ask me *once* what I want to change in Zobox (type, sorter, files, auth, or routes).
    - Summarize the change you plan to make before editing files.
 
 2. **Load current config**
 
-   - Read `/home/workspace/Inbox/zorter.config.toml`.
-   - If the file does not exist, copy `config/zorter.config.example.toml` from this repo into `/home/workspace/Inbox/zorter.config.toml` and then read it.
+   - Read `/home/workspace/Inbox/zobox.config.toml`.
+   - If the file does not exist, copy `config/zobox.config.example.toml` from this repo into `/home/workspace/Inbox/zobox.config.toml` and then read it.
 
 3. **Modify config**
 
    - For **types**:
      - Use `[types.<typeName>]` sections.
      - Always maintain: `description`, `channel`, and `payload_example` if possible.
-   - For **workflows**:
-     - Use `[workflows.<workflowName>]` sections.
+   - For **sorters**:
+     - Use `[sorters.<sorterName>]` sections.
      - Always set: `type`, `description`.
-     - Optionally set: `files_path_template`, `append_to_file`, `route_profile`.
+     - Optionally set: `files_path_template`, `append_to_file`, `destination`.
    - For **files**:
      - Keep `path_template` and `base_files_dir` consistent with `/home/workspace/Inbox/files`.
      - Maintain a valid `filename_strategy` (`original`, `timestampPrefix`, `eventIdPrefix`, or `uuid`).
@@ -2453,7 +2477,7 @@ and optional routing config:
 
 4. **Routing profiles**
 
-   - If I ask to send items to external workers or webhooks:
+   - If I ask to send messages to external workers or webhooks:
      - Read `/home/workspace/Inbox/routes.json` if it exists.
      - If it doesn’t, create it based on `config/routes.example.json`.
      - Add/modify a `profiles.<name>` entry with:
@@ -2465,7 +2489,7 @@ and optional routing config:
 
    - After editing, re-open the file and sanity-check:
      - TOML syntax is valid.
-     - No obviously duplicated or conflicting type/workflow names.
+     - No obviously duplicated or conflicting type/sorter names.
      - Path templates use only supported tokens:
        - `{baseFilesDir}`, `{channel}`, `{date}`, `{eventId}`, `{timestamp}`, `{filename}`.
 
@@ -2473,8 +2497,8 @@ and optional routing config:
 
    - Report back:
      - Which sections you changed.
-     - New/updated types, workflows, and route profiles.
-     - Any manual steps I should take next (e.g. restart the Zorter service, update env vars).
+     - New/updated types, sorters, and route profiles.
+     - Any manual steps I should take next (e.g. restart the Zobox service, update env vars).
 
 Use concise, technical language. Prefer editing the existing config over inventing new abstractions.
 ````
