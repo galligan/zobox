@@ -26,7 +26,7 @@ Collect the following from the user:
 
 Ask the user what they want to configure:
 
-```
+```text
 What aspect of file handling would you like to configure?
 
 - Change where attachments are stored (base_files_dir)?
@@ -207,7 +207,7 @@ After editing, verify:
 
 Report back:
 
-```
+```text
 Updated [files] configuration:
 
 Changes:
@@ -230,27 +230,27 @@ Next steps:
 
 ## Troubleshooting tips
 
-**Problem: Files not appearing where expected**
+### Problem: Files not appearing where expected
 - Check that `base_files_dir` exists or can be created
 - Verify path template tokens are correct
 - Ensure `enabled = true` in config
 - Check Zobox logs for permission errors
 
-**Problem: Filename collisions**
+### Problem: Filename collisions
 - Use `{eventId}` in path template for unique folders per item
 - Or switch to `timestampPrefix`, `eventIdPrefix`, or `uuid` strategy
 
-**Problem: Directories too deep or messy**
+### Problem: Directories too deep or messy
 - Simplify path template (fewer tokens)
 - Remove unnecessary hierarchy levels
 - Consider flat structure: `{baseFilesDir}/{eventId}/{filename}`
 
-**Problem: Can't find files later**
+### Problem: Can't find files later
 - Use `eventIdPrefix` or `eventIdPrefix` strategy for traceable names
 - Keep `{channel}` and `{date}` in path for browsing
 - Check SQLite `messages.file_dir` for actual storage location
 
-**Problem: Running out of disk space**
+### Problem: Running out of disk space
 - Set `keep_base64_in_envelope = false` (default)
 - Consider archiving old attachments
 - Monitor `base_files_dir` size regularly
@@ -260,7 +260,7 @@ Next steps:
 **User**: "I want to organize attachments by date first, then by channel, and add timestamps to filenames"
 
 **Agent**:
-```
+```text
 I'll configure files to organize by date → channel, with timestamp-prefixed filenames.
 
 Changes:

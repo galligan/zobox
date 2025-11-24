@@ -86,7 +86,7 @@ Create a new destination entry. Example:
   "destinations": {
     "store_only": {
       "kind": "noop",
-      "description": "Do nothing, keep item in local inbox."
+      "description": "Do nothing, keep message in local inbox."
     },
     "publish_to_worker": {
       "kind": "http",

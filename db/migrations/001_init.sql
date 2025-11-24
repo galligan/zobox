@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS messages (
   subscribed_by TEXT,
   subscribed_at TEXT,
   summary TEXT,
+  -- NOTE: tags TEXT is a denormalized cache for quick display/search.
+  -- The canonical source of truth is the message_tags junction table below.
+  -- This column may be populated by triggers or application code for performance.
   tags TEXT,
   CHECK (has_attachments = 0 OR attachments_count > 0)
 );

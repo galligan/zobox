@@ -17,8 +17,8 @@
 
 ## Build, Test, and Development Commands
 - `bun run dev` / `bun run start` — start the server.
-- `bun run lint` — placeholder; prefer adding Biome or ESLint and wire this script before committing.
-- `bun run test` — placeholder; add Vitest tests and update the script accordingly.
+- `bun run lint` — run Biome linter checks (see lefthook.yml for pre-commit integration).
+- `bun run test` — run Bun test suite (328+ tests; see lefthook.yml for pre-commit integration).
 
 ## Coding Style & Naming Conventions
 - TypeScript ES2022 modules with `strict` mode on (see `tsconfig.json`).
