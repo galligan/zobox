@@ -1,0 +1,20 @@
+{
+  "$schema": "https://galligan.dev/zobox/routes.schema.json",
+  "profiles": {
+    "store_only": {
+      "kind": "noop",
+      "description": "Do nothing, keep message in local inbox."
+    },
+    "publish_to_worker": {
+      "kind": "http",
+      "description": "POST the full message envelope to a worker service.",
+      "url": "http://localhost:9000/zobox/messages",
+      "method": "POST",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "enabled": true,
+      "timeoutMs": 5000
+    }
+  }
+}

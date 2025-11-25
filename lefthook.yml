@@ -1,0 +1,43 @@
+# Lefthook Configuration
+# See: https://github.com/evilmartians/lefthook/blob/master/docs/configuration.md
+
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "**/*.{ts,json,md}"
+      run: bun run format
+      stage_fixed: true
+      skip:
+        - merge
+        - rebase
+
+    lint:
+      glob: "**/*.{ts,tsx}"
+      run: bun run lint
+      skip:
+        - merge
+        - rebase
+
+    types:
+      glob: "**/*.ts"
+      run: bunx tsc --noEmit
+      skip:
+        - merge
+        - rebase
+
+    test-related:
+      # Only run tests if test files or source files changed
+      glob: "**/*.ts"
+      run: bun test --bail --run
+      skip:
+        - merge
+        - rebase
+
+pre-push:
+  commands:
+    test-all:
+      run: bun test --run
+
+    lint-strict:
+      run: bun run check
