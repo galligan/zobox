@@ -10,12 +10,14 @@ import {
 } from "./handlers/messages.js";
 import { checkHealth } from "./health.js";
 import { logger } from "./logger.js";
+import { hasApiKeys, validateApiKey } from "./storage/api-keys.js";
 import {
   ackMessage,
   findUnclaimedMessages,
   initStorage,
   listAllTags,
   queryMessages,
+  type Storage,
   searchTags,
 } from "./storage.js";
 import type { MessageFilters, ZoboxConfig } from "./types.js";
@@ -65,7 +67,7 @@ export async function startServer(options?: {
 
   app.post("/messages", async (c) => {
     const runtimeCtx = c.get("runtime");
-    const auth = authenticate(c, runtimeCtx.config, {
+    const auth = await authenticate(c, runtimeCtx.config, runtimeCtx.storage, {
       requireAdmin: true,
     });
     if ("error" in auth) {
@@ -97,7 +99,7 @@ export async function startServer(options?: {
 
   app.get("/messages", async (c) => {
     const runtimeCtx = c.get("runtime");
-    const auth = authenticate(c, runtimeCtx.config);
+    const auth = await authenticate(c, runtimeCtx.config, runtimeCtx.storage);
     if ("error" in auth) {
       return c.json(auth.error, auth.status as 401 | 403);
     }
@@ -122,9 +124,9 @@ export async function startServer(options?: {
     return c.json(result);
   });
 
-  app.get("/messages/next", (c) => {
+  app.get("/messages/next", async (c) => {
     const runtimeCtx = c.get("runtime");
-    const auth = authenticate(c, runtimeCtx.config);
+    const auth = await authenticate(c, runtimeCtx.config, runtimeCtx.storage);
     if ("error" in auth) {
       return c.json(auth.error, auth.status as 401 | 403);
     }
@@ -147,7 +149,7 @@ export async function startServer(options?: {
 
   app.post("/messages/:id/ack", async (c) => {
     const runtimeCtx = c.get("runtime");
-    const auth = authenticate(c, runtimeCtx.config, {
+    const auth = await authenticate(c, runtimeCtx.config, runtimeCtx.storage, {
       requireAdmin: true,
     });
     if ("error" in auth) {
@@ -195,9 +197,9 @@ export async function startServer(options?: {
   });
 
   // Tag management endpoints
-  app.get("/tags", (c) => {
+  app.get("/tags", async (c) => {
     const runtimeCtx = c.get("runtime");
-    const auth = authenticate(c, runtimeCtx.config);
+    const auth = await authenticate(c, runtimeCtx.config, runtimeCtx.storage);
     if ("error" in auth) {
       return c.json(auth.error, auth.status as 401 | 403);
     }
@@ -218,7 +220,9 @@ export async function startServer(options?: {
 
   app.post("/tags/merge", async (c) => {
     const runtimeCtx = c.get("runtime");
-    const auth = authenticate(c, runtimeCtx.config, { requireAdmin: true });
+    const auth = await authenticate(c, runtimeCtx.config, runtimeCtx.storage, {
+      requireAdmin: true,
+    });
     if ("error" in auth) {
       return c.json(auth.error, auth.status as 401 | 403);
     }
@@ -285,13 +289,15 @@ function extractBearerToken(authHeader?: string | null): string | undefined {
   return m ? m[1] : undefined;
 }
 
-function authenticate(
+async function authenticate(
   c: Context<AppEnv>,
   config: ZoboxConfig,
+  storage: Storage,
   opts: { requireAdmin?: boolean; requireAuthForPublic?: boolean } = {}
-):
+): Promise<
   | { role: "admin" | "read" | "public" }
-  | { error: { error: string }; status: number } {
+  | { error: { error: string }; status: number }
+> {
   const required = config.auth.required ?? true;
   const mustAuth = required || opts.requireAdmin || opts.requireAuthForPublic;
 
@@ -310,10 +316,19 @@ function authenticate(
 
   let role: "admin" | "read" | "public" | null = null;
 
+  // First, check environment variable keys (backwards compatibility)
   if (headerKey && adminKeyEnv && headerKey === adminKeyEnv) {
     role = "admin";
   } else if (headerKey && readKeyEnv && headerKey === readKeyEnv) {
     role = "read";
+  }
+
+  // If no match from env vars, check SQLite-stored hashed keys
+  if (!role && headerKey && hasApiKeys(storage.db)) {
+    const keyResult = await validateApiKey(storage.db, headerKey);
+    if (keyResult.valid && keyResult.role) {
+      role = keyResult.role;
+    }
   }
 
   // If we didn't match a role but auth is required, reject
