@@ -18,7 +18,8 @@ CREATE TABLE messages_new (
   has_attachments INTEGER NOT NULL DEFAULT 0,
   subscribed_by TEXT,
   subscribed_at TEXT,
-  summary TEXT
+  summary TEXT,
+  tags TEXT
 );
 
 -- Copy data from old table
@@ -33,7 +34,8 @@ INSERT INTO messages_new (
   has_attachments,
   subscribed_by,
   subscribed_at,
-  summary
+  summary,
+  tags
 )
 SELECT
   id,
@@ -46,7 +48,8 @@ SELECT
   has_attachments,
   subscribed_by,
   subscribed_at,
-  summary
+  summary,
+  tags
 FROM messages;
 
 -- Drop old table
@@ -60,3 +63,4 @@ CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages (created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_type ON messages (type);
 CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages (channel);
 CREATE INDEX IF NOT EXISTS idx_messages_has_attachments ON messages (has_attachments);
+CREATE INDEX IF NOT EXISTS idx_messages_tags ON messages (tags);

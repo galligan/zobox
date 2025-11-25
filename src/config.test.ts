@@ -25,6 +25,8 @@ describe("loadConfig", () => {
   });
 
   it("loads valid config with all sections defined", () => {
+    // Note: base_dir, db_path, and base_files_dir from config file are ignored
+    // in favor of CLI's baseDir (tempDir). This allows --base-dir to always work.
     const configContent = `
 [zobox]
 base_dir = "/custom/base"
@@ -56,8 +58,9 @@ description = "Test sorter"
 
     const config = loadConfig(tempDir);
 
-    expect(config.zobox.base_dir).toBe("/custom/base");
-    expect(config.zobox.db_path).toBe("/custom/db/zobox.db");
+    // CLI baseDir always takes precedence over config file paths
+    expect(config.zobox.base_dir).toBe(tempDir);
+    expect(config.zobox.db_path).toBe(path.join(tempDir, "db", "zobox.db"));
     expect(config.zobox.default_channel).toBe("CustomInbox");
 
     expect(config.auth.admin_api_key_env_var).toBe("CUSTOM_ADMIN_KEY");
@@ -65,7 +68,8 @@ description = "Test sorter"
     expect(config.auth.required).toBe(false);
 
     expect(config.files.enabled).toBe(true);
-    expect(config.files.base_files_dir).toBe("/custom/files");
+    // CLI baseDir also determines base_files_dir
+    expect(config.files.base_files_dir).toBe(path.join(tempDir, "files"));
     expect(config.files.path_template).toBe(
       "{baseFilesDir}/{channel}/{filename}"
     );
@@ -129,18 +133,9 @@ base_dir = "/invalid"
     expect(() => loadConfig(tempDir)).toThrow(FAILED_TO_PARSE_TOML_REGEX);
   });
 
-  it("throws validation error when base_dir is empty", () => {
-    const configContent = `
-[zobox]
-base_dir = ""
-db_path = "/some/path/db"
-default_channel = "Inbox"
-`;
-
-    fs.writeFileSync(path.join(tempDir, "zobox.config.toml"), configContent);
-
-    expect(() => loadConfig(tempDir)).toThrow(CONFIG_VALIDATION_FAILED_REGEX);
-  });
+  // Note: Empty base_dir in config file no longer causes validation error
+  // because CLI's baseDir always takes precedence. See "loads valid config"
+  // test for details.
 
   it("throws validation error when admin_api_key_env_var is not UPPER_SNAKE_CASE", () => {
     const configContent = `

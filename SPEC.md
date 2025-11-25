@@ -437,7 +437,7 @@ Zobox is designed to be installed into a Zo server as a user service.
 - `Label: zobox`
 - `Type: http`
 - `Local port: 8787` (default)
-- `Entrypoint: bunx zobox start`
+- `Entrypoint: bunx zobox serve`
 - `Workdir: /home/workspace/Inbox` (or wherever it was installed)
 
 Zobox can ship with Zo prompts:
@@ -1964,9 +1964,10 @@ function printHelp() {
 zobox - Zo-native inbox + sorter + router
 
 Usage:
-  zobox start [--base-dir PATH] [--port PORT]
-  zobox migrate [--base-dir PATH]
-  zobox help
+  zobox init [--base-dir PATH] [--port PORT]   Initialize and start zobox
+  zobox serve [--base-dir PATH] [--port PORT]  Start the server
+  zobox migrate [--base-dir PATH]              Run database migrations
+  zobox help                                   Show this help
 
 Environment:
   ZOBOX_BASE_DIR   Base directory for inbox (default: /home/workspace/Inbox)
@@ -1976,7 +1977,7 @@ For Zo, configure a User Service with:
   Label: zobox
   Type: http
   Local port: 8787
-  Entrypoint: bunx zobox start
+  Entrypoint: bunx zobox serve
   Workdir: /home/workspace/Inbox
 `);
 }
@@ -2238,24 +2239,28 @@ curl "http://localhost:8787/messages?limit=20" \
 
 ## Zo integration
 
-Create a User Service in Zo:
+### One-time setup
+
+Initialize Zobox in your workspace:
+
+```bash
+ZOBOX_ADMIN_API_KEY="your-admin-key" bunx zobox init --base-dir /home/workspace/Inbox
+```
+
+This creates the directory structure, copies config files, and runs migrations.
+
+### Create User Service in Zo
 
 * **Label**: `zobox`
 * **Type**: `http`
 * **Local port**: `8787`
-* **Entrypoint**: `bunx zobox start`
+* **Entrypoint**: `bunx zobox serve`
 * **Workdir**: `/home/workspace/Inbox`
-
-Copy:
-
-* `config/zobox.config.example.toml` → `/home/workspace/Inbox/zobox.config.toml`
-* `db/migrations/001_init.sql` → `/home/workspace/Inbox/db/migrations/001_init.sql`
 
 Set environment variables on the service:
 
 * `ZOBOX_ADMIN_API_KEY`
 * `ZOBOX_READ_API_KEY` (optional)
-* `ZOBOX_BASE_DIR=/home/workspace/Inbox`
 
 ## HTTP API
 

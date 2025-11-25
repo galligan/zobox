@@ -41,6 +41,8 @@ function parseTomlConfig(baseDir: string): Record<string, unknown> {
 
 /**
  * Build config object with defaults merged with TOML values.
+ * Note: baseDir from CLI always takes precedence over config file's base_dir.
+ * Derived paths (db_path, base_files_dir) are recomputed from the effective baseDir.
  */
 function buildConfigWithDefaults(
   raw: Record<string, unknown>,
@@ -50,11 +52,11 @@ function buildConfigWithDefaults(
   const rawAuth = (raw.auth ?? {}) as Record<string, unknown>;
   const rawFiles = (raw.files ?? {}) as Record<string, unknown>;
 
-  const base_dir: string = (rawZobox.base_dir as string) ?? baseDir;
-  const db_path: string =
-    (rawZobox.db_path as string) ?? path.join(base_dir, "db", "zobox.db");
-  const base_files_dir: string =
-    (rawFiles.base_files_dir as string) ?? path.join(base_dir, "files");
+  // CLI baseDir always wins - this allows `zobox --base-dir /custom/path` to work
+  // even if the config file has a different base_dir hardcoded
+  const base_dir: string = baseDir;
+  const db_path: string = path.join(base_dir, "db", "zobox.db");
+  const base_files_dir: string = path.join(base_dir, "files");
 
   return {
     zobox: {

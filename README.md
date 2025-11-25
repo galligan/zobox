@@ -36,23 +36,21 @@ export ZOBOX_ADMIN_API_KEY="dev-admin-key"
 export ZOBOX_READ_API_KEY="dev-read-key"
 ```
 
-### 3. Initialize Base Directory
+### 3. Initialize and Start
 
 ```bash
-mkdir -p /home/workspace/Inbox/db/migrations
-cp config/zobox.config.example.toml /home/workspace/Inbox/zobox.config.toml
-cp db/migrations/001_init.sql /home/workspace/Inbox/db/migrations/001_init.sql
+ZOBOX_ADMIN_API_KEY="dev-admin-key" bunx zobox init --base-dir /home/workspace/Inbox
 ```
 
-### 4. Start the Server
-
-```bash
-ZOBOX_BASE_DIR=/home/workspace/Inbox bun run src/server.ts
-```
+This command:
+- Creates the directory structure (`inbox/`, `files/`, `db/`, `logs/`)
+- Copies example config files
+- Runs database migrations
+- Starts the server
 
 Server listens on `http://localhost:8787` by default.
 
-### 5. Ingest Your First Item
+### 4. Ingest Your First Item
 
 ```bash
 curl -X POST "http://localhost:8787/messages" \
@@ -64,7 +62,7 @@ curl -X POST "http://localhost:8787/messages" \
   }'
 ```
 
-### 6. List Items
+### 5. List Items
 
 ```bash
 curl "http://localhost:8787/messages?limit=20" \
@@ -111,15 +109,20 @@ bun run src/server.ts
 ### CLI Commands
 
 ```bash
-# Start server
-bunx zobox start
+# Initialize directory structure, copy configs, run migrations, and start server
+bunx zobox init [--base-dir PATH] [--port PORT]
+
+# Start server only (assumes init already done)
+bunx zobox serve [--base-dir PATH] [--port PORT]
 
 # Run migrations only
-bunx zobox migrate
+bunx zobox migrate [--base-dir PATH]
 
 # Help
 bunx zobox help
 ```
+
+> **Note**: The `--base-dir` flag always takes precedence over `ZOBOX_BASE_DIR` environment variable and any `base_dir` value in the config file.
 
 ### Testing
 
@@ -207,22 +210,23 @@ zobox/
 
 Deploy Zobox as a Zo User Service:
 
-### 1. Create User Service
+### 1. Initialize Zobox (One-Time Setup)
+
+```bash
+ZOBOX_ADMIN_API_KEY="your-admin-key" bunx zobox init --base-dir /home/workspace/Inbox
+```
+
+This creates the directory structure, copies config files, and runs migrations. You can stop the server after initialization (Ctrl+C).
+
+### 2. Create User Service
 
 Configure in Zo:
 
 - **Label**: `zobox`
 - **Type**: `http`
 - **Local port**: `8787`
-- **Entrypoint**: `bunx zobox start`
+- **Entrypoint**: `bunx zobox serve`
 - **Workdir**: `/home/workspace/Inbox`
-
-### 2. Copy Configuration Files
-
-```bash
-cp config/zobox.config.example.toml /home/workspace/Inbox/zobox.config.toml
-cp db/migrations/001_init.sql /home/workspace/Inbox/db/migrations/001_init.sql
-```
 
 ### 3. Set Environment Variables
 
@@ -230,7 +234,6 @@ Add to your Zo service configuration:
 
 - `ZOBOX_ADMIN_API_KEY` (required)
 - `ZOBOX_READ_API_KEY` (optional, recommended)
-- `ZOBOX_BASE_DIR=/home/workspace/Inbox`
 
 Your Zobox service will start automatically with Zo.
 

@@ -79,15 +79,19 @@ destination = "publish_to_worker"
 
 Global Zobox settings.
 
+> **Note**: The CLI `--base-dir` flag and `ZOBOX_BASE_DIR` environment variable always take precedence over config file values for `base_dir`, `db_path`, and `base_files_dir`. This allows you to use the same config file across different environments while specifying paths at runtime.
+
 **Fields**:
 
 - `base_dir` (string, default: `/home/workspace/Inbox`)
   - Root directory for all Zobox data
   - Contains `inbox/`, `files/`, `db/`, `logs/`, and `zobox.config.toml`
+  - **Overridden by**: `--base-dir` CLI flag or `ZOBOX_BASE_DIR` env var
 
 - `db_path` (string, default: `{base_dir}/db/zobox.db`)
   - Path to SQLite database file
   - Used for indexing messages and enabling fast queries
+  - **Derived from**: `base_dir` (automatically computed when CLI overrides `base_dir`)
 
 - `default_channel` (string, default: `"Inbox"`)
   - Fallback channel when no type-specific or explicit channel is provided
@@ -152,6 +156,7 @@ File attachment handling configuration.
 - `base_files_dir` (string, default: `{base_dir}/files`)
   - Root directory for storing attachments
   - All attachment paths are relative to this directory
+  - **Derived from**: `base_dir` (automatically computed when CLI overrides `base_dir`)
 
 - `path_template` (string, default: `"{baseFilesDir}/{channel}/{date}/{eventId}/{filename}"`)
   - Template for attachment file paths

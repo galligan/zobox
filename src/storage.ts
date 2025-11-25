@@ -362,12 +362,11 @@ export async function queryMessages(
   }
 
   sql += " ORDER BY created_at DESC, id DESC";
-  sql += " LIMIT @limit OFFSET @offset";
-  params.limit = safeLimit;
-  params.offset = offset;
+  // Use $N syntax for LIMIT/OFFSET (bun:sqlite doesn't support @named params for these)
+  sql += " LIMIT $limit OFFSET $offset";
 
   const stmt = storage.db.prepare(sql);
-  const rows = stmt.all(params as Record<string, string | number>) as {
+  const rows = stmt.all({ ...params, $limit: safeLimit, $offset: offset }) as {
     id: string;
     type: string;
     channel: string;
@@ -470,11 +469,11 @@ export function findUnclaimedMessages(
   }
 
   sql += " ORDER BY created_at ASC, id ASC";
-  sql += " LIMIT @limit";
-  params.limit = safeLimit;
+  // Use $N syntax for LIMIT (bun:sqlite doesn't support @named params for this)
+  sql += " LIMIT $limit";
 
   const stmt = storage.db.prepare(sql);
-  const rows = stmt.all(params as Record<string, string | number>) as {
+  const rows = stmt.all({ ...params, $limit: safeLimit }) as {
     id: string;
     file_path: string;
   }[];

@@ -14,3 +14,4 @@ inbox/
 files/
 db/zobox.db
 logs/
+.sandbox/
