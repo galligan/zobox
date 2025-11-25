@@ -5,7 +5,7 @@ pre-commit:
   parallel: true
   commands:
     format:
-      glob: "*.{ts,json,md}"
+      glob: "**/*.{ts,json,md}"
       run: bun run format
       stage_fixed: true
       skip:
@@ -13,14 +13,14 @@ pre-commit:
         - rebase
 
     lint:
-      glob: "*.{ts,tsx}"
+      glob: "**/*.{ts,tsx}"
       run: bun run lint
       skip:
         - merge
         - rebase
 
     types:
-      glob: "*.ts"
+      glob: "**/*.ts"
       run: bunx tsc --noEmit
       skip:
         - merge
@@ -28,7 +28,7 @@ pre-commit:
 
     test-related:
       # Only run tests if test files or source files changed
-      glob: "*.ts"
+      glob: "**/*.ts"
       run: bun test --bail --run
       skip:
         - merge

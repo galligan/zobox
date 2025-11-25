@@ -1387,10 +1387,10 @@ function appendToFile(
   fs.appendFileSync(filePath, entry, 'utf8');
 }
 
-async function routeItem(
+async function routeMessage(
   destinationName: string,
   envelope: MessageEnvelope,
-  routesConfig?: DestinationsConfig,
+  routesConfig?: RoutesConfig,
 ): Promise<void> {
   if (!destinationName || destinationName === 'store_only') return;
 
@@ -1479,7 +1479,7 @@ import { loadConfig, loadRoutesConfig } from './config.js';
 import {
   initStorage,
   writeEnvelope,
-  insertItemIndex,
+  insertMessageIndex,
   queryMessages,
   findUnclaimedMessages,
   ackMessage,
@@ -1493,7 +1493,7 @@ import {
 import type {
   ZoboxConfig,
   RoutesConfig,
-  NewItemInput,
+  NewMessageInput,
   AttachmentInput,
   MessageEnvelope,
   MessageFilters,
@@ -1707,7 +1707,7 @@ export async function startServer(options?: {
       summary: null,
     };
 
-    insertItemIndex(runtimeCtx.storage, index);
+    insertMessageIndex(runtimeCtx.storage, index);
 
     await applysortersideEffects(
       sorterBinding,

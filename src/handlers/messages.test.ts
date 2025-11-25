@@ -3,7 +3,6 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { Hono } from "hono";
 import { ValidationError } from "../errors.js";
 import type { Storage } from "../storage.js";
 import type {
@@ -23,33 +22,7 @@ import {
 
 describe("parseMultipartRequest", () => {
   it("should parse valid multipart request with event field", async () => {
-    const app = new Hono();
     const message = { type: "task", payload: { title: "Test" } };
-
-    const formData = new FormData();
-    formData.append("event", JSON.stringify(message));
-
-    const req = new Request("http://localhost/test", {
-      method: "POST",
-      body: formData,
-    });
-
-    const _c = await Promise.resolve(app.request(req)).then(
-      (_res: Response) => {
-        const ctx = { req } as any;
-        // biome-ignore lint/suspicious/useAwait: Mock function must match async interface
-        ctx.req.parseBody = async () => {
-          const fd = new FormData();
-          fd.append("event", JSON.stringify(message));
-          const body: Record<string, unknown> = {};
-          for (const [key, value] of fd.entries()) {
-            body[key] = value;
-          }
-          return Promise.resolve(body);
-        };
-        return ctx;
-      }
-    );
 
     const mockContext = {
       req: {
