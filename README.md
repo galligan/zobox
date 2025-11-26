@@ -1,222 +1,46 @@
 # Zobox
 
-Zobox is a Zo-native, open-source inbox + sorter + router engine. It accepts arbitrary structured JSON messages with optional file attachments, stores them durably, and routes them according to configurable sorters.
+Zobox is a Zo-native inbox + sorter + router. It ingests JSON (multipart or raw), stores envelopes and attachments on disk/SQLite, and routes them via configurable sorters.
 
-## Features
+## Quickstart (Zo-first)
 
-- **Single ingestion endpoint**: `POST /messages` with multipart or JSON support
-- **Filesystem-first storage**: Envelopes in `inbox/`, attachments in `files/`, indexed by SQLite
-- **Type-driven sorters**: Define types and sorters in `zobox.config.toml`
-- **Worker polling**: `GET /messages/next` for building distributed subscribers
-- **Flexible routing**: Send messages to webhooks, workers, or store locally
-- **Path templating**: Control attachment storage with `{channel}/{date}/{eventId}/{filename}` patterns
-- **Multiple auth modes**: Admin and read-only API keys via environment variables
-- **Lightweight**: Bun/Hono server, easy to run as a Zo User Service or standalone
-
-## Quick Start
-
-Get Zobox running locally in under 5 minutes:
-
-### 1. Install Dependencies
-
+1) **Install deps**
 ```bash
 bun install
 ```
 
-Or with npm:
-
+2) **Initialize your base dir** (creates folders, copies example configs, runs migrations, generates API keys if needed)
 ```bash
-npm install
+bunx zobox init --base-dir /home/workspace/Inbox
+```
+- If you pass `--admin-key` / `--read-key`, those are stored (hashed) in SQLite.
+- If not provided, keys are generated and printed **once**; save them.
+
+3) **Start the server** (init already starts it; re-run with serve)
+```bash
+bunx zobox serve --base-dir /home/workspace/Inbox --port 8787
 ```
 
-### 2. Set Up Environment
-
-```bash
-export ZOBOX_ADMIN_API_KEY="dev-admin-key"
-export ZOBOX_READ_API_KEY="dev-read-key"
-```
-
-### 3. Initialize and Start
-
-```bash
-ZOBOX_ADMIN_API_KEY="dev-admin-key" bunx zobox init --base-dir /home/workspace/Inbox
-```
-
-This command:
-- Creates the directory structure (`inbox/`, `files/`, `db/`, `logs/`)
-- Copies example config files
-- Runs database migrations
-- Starts the server
-
-Server listens on `http://localhost:8787` by default.
-
-### 4. Ingest Your First Item
-
+4) **Send a message**
 ```bash
 curl -X POST "http://localhost:8787/messages" \
   -H "content-type: application/json" \
-  -H "x-api-key: $ZOBOX_ADMIN_API_KEY" \
-  -d '{
-    "type": "update",
-    "payload": { "text": "First idea" }
-  }'
+  -H "x-api-key: YOUR_ADMIN_KEY" \
+  -d '{"type":"update","payload":{"text":"First idea"}}'
 ```
 
-### 5. List Items
-
+5) **Read messages**
 ```bash
 curl "http://localhost:8787/messages?limit=20" \
-  -H "x-api-key: $ZOBOX_READ_API_KEY"
+  -H "x-api-key: YOUR_READ_KEY"
 ```
 
-You should see your item in the response!
+That’s it—you have a Zo-ready inbox + router running locally.
 
-## Development
-
-### Prerequisites
-
-- Bun >= 1.1 (or Node.js >= 18)
-- SQLite (included with Bun)
-
-### Setup
-
-```bash
-# Install dependencies
-bun install
-
-# Copy example config
-cp config/zobox.config.example.toml /home/workspace/Inbox/zobox.config.toml
-
-# Set environment variables
-export ZOBOX_ADMIN_API_KEY="dev-admin-key"
-export ZOBOX_READ_API_KEY="dev-read-key"
-export ZOBOX_BASE_DIR="/home/workspace/Inbox"
-```
-
-### Running
-
-```bash
-# Development mode (with hot reload)
-bun run dev
-
-# Production mode
-bun run start
-
-# Or directly
-bun run src/server.ts
-```
-
-### CLI Commands
-
-```bash
-# Initialize directory structure, copy configs, run migrations, and start server
-bunx zobox init [--base-dir PATH] [--port PORT]
-
-# Start server only (assumes init already done)
-bunx zobox serve [--base-dir PATH] [--port PORT]
-
-# Run migrations only
-bunx zobox migrate [--base-dir PATH]
-
-# Help
-bunx zobox help
-```
-
-> **Note**: The `--base-dir` flag always takes precedence over `ZOBOX_BASE_DIR` environment variable and any `base_dir` value in the config file.
-
-### Testing
-
-```bash
-# Run tests
-bun run test
-
-# Run tests in watch mode
-bun run test:watch
-
-# Lint and check code
-bun run lint
-
-# Lint and auto-fix issues
-bun run check
-```
-
-### Git Hooks
-
-This project uses [Lefthook](https://github.com/evilmartians/lefthook) for automated pre-commit and pre-push checks:
-
-**Pre-commit hooks** (run in parallel):
-- **format**: Auto-format code using Biome
-- **lint**: Check code quality with Biome
-- **types**: TypeScript type checking with `tsc --noEmit`
-- **test-related**: Run tests when test files or source files change
-
-**Pre-push hooks**:
-- **test-all**: Run full test suite
-- **lint-strict**: Strict linting with error-on-warnings
-
-Hooks are installed automatically via the `prepare` script when you run `bun install`.
-
-#### Customizing Hooks
-
-To customize hooks for your local environment, copy the example:
-
-```bash
-cp .lefthook-local.yml.example .lefthook-local.yml
-```
-
-Then edit `.lefthook-local.yml` to skip expensive checks during fast iteration:
-
-```yaml
-# Skip type checking and tests on commit (faster iteration)
-pre-commit:
-  commands:
-    types:
-      skip: true
-    test-related:
-      skip: true
-```
-
-Your local customizations won't be committed (`.lefthook-local.yml` is in `.gitignore`).
-
-### Project Structure
-
-```
-zobox/
-  bin/
-    zobox.ts              # CLI entrypoint
-  src/
-    types.ts               # TypeScript type definitions
-    config.ts              # TOML config loader
-    storage.ts             # SQLite + filesystem storage
-    sorters.ts           # sorter and routing logic
-    server.ts              # Hono HTTP server
-  config/
-    zobox.config.example.toml
-    routes.example.json
-  db/
-    migrations/
-      001_init.sql
-  docs/
-    API.md                 # API reference
-    CONFIGURATION.md       # Configuration guide
-```
-
-## Documentation
-
-- **[API Reference](docs/API.md)**: Complete HTTP API documentation with examples
-- **[Configuration Guide](docs/CONFIGURATION.md)**: TOML schema, path templates, sorters, and route destinations
-
-## Zo Integration
-
-Deploy Zobox as a Zo User Service:
-
-### 1. Initialize Zobox (One-Time Setup)
-
-```bash
-ZOBOX_ADMIN_API_KEY="your-admin-key" bunx zobox init --base-dir /home/workspace/Inbox
-```
-
-This creates the directory structure, copies config files, and runs migrations. You can stop the server after initialization (Ctrl+C).
+## Docs
+- **API**: `docs/API.md`
+- **Configuration**: `docs/CONFIGURATION.md`
+- **Development setup & workflows**: `docs/development/setup.md`
 
 ### 2. Create User Service
 
